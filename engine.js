@@ -36,7 +36,7 @@ export class Game {
     this.buildFlow();
   }
   rng(){let x=this.s.seed;x^=x<<13;x^=x>>>17;x^=x<<5;this.s.seed=x>>>0;return this.s.seed/4294967296;}
-  emit(type,data={}){if(this.events.length<512)this.events.push({type,...data});}
+  emit(type,data={}){if(this.events.length<512)this.events.push({...data,type});}
   drainEvents(){const a=this.events;this.events=[];return a;}
   snapshot(){return JSON.parse(JSON.stringify(this.s));}
   get maxHp(){return 100+this.s.up.health*20;}
@@ -46,7 +46,8 @@ export class Game {
   get remaining(){return this.s.spawnLeft+this.s.enemies.filter(e=>e.hp>0).length;}
   buildGrid(){
     const {w,h,cell}=WORLD;this.cols=w/cell;this.rows=h/cell;this.blocked=new Uint8Array(this.cols*this.rows);
-    for(let y=0;y<this.rows;y++)for(let x=0;x<this.cols;x++)if(this.walls.some(b=>circleRect(x*cell+cell/2,y*cell+cell/2,16,b)))this.blocked[y*this.cols+x]=1;
+    // The navigation grid must fit the largest enemy, not only a small zombie.
+    for(let y=0;y<this.rows;y++)for(let x=0;x<this.cols;x++)if(this.walls.some(b=>circleRect(x*cell+cell/2,y*cell+cell/2,32,b)))this.blocked[y*this.cols+x]=1;
   }
   findFree(x,y,r=16){
     if(!this.walls.some(b=>circleRect(x,y,r,b)))return{x,y};
@@ -62,6 +63,11 @@ export class Game {
   solidObjects(){return this.s.objects.filter(o=>o.hp>0&&(o.type==='wall'||o.type==='barrel')).map(o=>({x:o.x-18,y:o.y-18,w:36,h:36,object:o}));}
   lineLimit(x,y,dx,dy,max,objects=true){let end=max;for(const b of this.walls)end=Math.min(end,rayBox(x,y,dx,dy,b,end));if(objects)for(const b of this.solidObjects())end=Math.min(end,rayBox(x,y,dx,dy,b,end));return end;}
   clearLine(a,b,objects=false){const d=distance(a,b);return d<1||this.lineLimit(a.x,a.y,(b.x-a.x)/d,(b.y-a.y)/d,d,objects)>=d-2;}
+  walkClear(a,b,r){
+    const d=distance(a,b);if(d<1)return true;
+    const dx=(b.x-a.x)/d,dy=(b.y-a.y)/d,pad=r+1;
+    return this.walls.every(w=>rayBox(a.x,a.y,dx,dy,{x:w.x-pad,y:w.y-pad,w:w.w+pad*2,h:w.h+pad*2},d)>=d);
+  }
   move(e,dx,dy,r,solids){
     const steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/9));let hit=null;
     for(let k=0;k<steps;k++){
@@ -94,7 +100,7 @@ export class Game {
   grant(id){const s=this.s,w=GUN[id];if(!w||s.owned.includes(id))return false;s.owned.push(id);s.ammo[id]=ammoMax(w,s.up);this.emit('unlock',{id,name:w.name});return true;}
   buyWeapon(id){const s=this.s,w=GUN[id];if(s.phase!=='shop'||s.mode!=='survival'||!w||s.owned.includes(id)||s.cash<w.cost)return false;s.cash-=w.cost;this.grant(id);s.selected=id;return true;}
   upgrade(id,free=false){
-    const s=this.s,u=UPGRADES.find(u=>u.id===id);if(!u||s.up[id]>=u.max||(!free&&(s.phase!=='shop'||s.mode!=='survival')))return false;
+    const s=this.s,u=UPGRADES.find(u=>u.id===id);if(!u||s.up[u.id]>=u.max||(!free&&(s.phase!=='shop'||s.mode!=='survival')))return false;
     const cost=upgradeCost(id,s.up[id]);if(!free&&s.cash<cost)return false;if(!free)s.cash-=cost;s.up[id]++;
     if(id==='health')s.player.hp=Math.min(this.maxHp,s.player.hp+20);
     if(id==='capacity')for(const w of WEAPONS)if(s.owned.includes(w.id)&&w.ammo>0)s.ammo[w.id]=Math.min(ammoMax(w,s.up),s.ammo[w.id]+Math.ceil(w.ammo*.25));
@@ -135,7 +141,7 @@ export class Game {
     if(e.hp<=0)this.kill(e);else if(e.type!=='overlord')this.move(e,dx*3,dy*3,e.r,[...this.walls,...this.solidObjects()]);
   }
   kill(e){
-    const s=this.s,b=ENEMIES[e.type];e.hp=0;s.kills++;s.combo=Math.min(999,Math.floor(s.combo)+1);s.bestCombo=Math.max(s.bestCombo,s.combo);s.comboGrace=2.6;s.score+=b.score*Math.max(1,s.combo);s.cash+=b.value;this.emit('kill',{x:e.x,y:e.y,type:e.type,combo:s.combo});
+    const s=this.s,b=ENEMIES[e.type];e.hp=0;s.kills++;s.combo=Math.min(999,Math.floor(s.combo)+1);s.bestCombo=Math.max(s.bestCombo,s.combo);s.comboGrace=2.6;s.score+=b.score*Math.max(1,s.combo);s.cash+=b.value;this.emit('kill',{x:e.x,y:e.y,enemyType:e.type,combo:s.combo});
     const r=this.rng();let kind=null;if(r<.09)kind='health';else if(r<.3)kind='ammo';else if(r<.4)kind='cash';
     if(kind&&s.pickups.length<150)s.pickups.push({id:s.nextId++,x:e.x,y:e.y,kind,life:35});
     if(e.type==='overlord'){s.pickups.push({id:s.nextId++,x:e.x+25,y:e.y,kind:'health',life:50},{id:s.nextId++,x:e.x-25,y:e.y,kind:'ammo',life:50});this.emit('toast',{text:'OVERLORD DOWN. +350 credits.'});}
@@ -182,7 +188,7 @@ export class Game {
         e.attack=e.type==='overlord'?1.8:2.3;this.emit('fireball',{x:e.x,y:e.y});
       }
       let dx=p.x-e.x,dy=p.y-e.y;
-      if(!this.clearLine(e,p)){
+      if(!this.walkClear(e,p,e.r)){
         const cx=clamp(Math.floor(e.x/40),0,this.cols-1),cy=clamp(Math.floor(e.y/40),0,this.rows-1);let best=Infinity,q=null;
         for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){if(!ox&&!oy)continue;const nx=cx+ox,ny=cy+oy;if(nx<0||ny<0||nx>=this.cols||ny>=this.rows)continue;const ni=ny*this.cols+nx;if(this.flow[ni]<0||this.blocked[cy*this.cols+nx]||this.blocked[ny*this.cols+cx])continue;const point={x:nx*40+20,y:ny*40+20};const cost=this.flow[ni]*40+distance(point,e)*.5;if(cost<best){best=cost;q=point;}}
         if(q){dx=q.x-e.x;dy=q.y-e.y;}else{dx=0;dy=0;}

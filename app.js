@@ -12,7 +12,12 @@ const input={keys:new Set(),mouse:{x:0,y:0,down:false,active:false},move:{x:0,y:
 const heldPointers=new Map();
 const money=n=>Math.floor(n).toLocaleString('en-US');
 const clock=n=>`${Math.floor(n/60)}:${String(Math.floor(n%60)).padStart(2,'0')}`;
-const touchMode=()=>settings.touch==='on'||(settings.touch!=='off'&&(matchMedia('(pointer:coarse)').matches||navigator.maxTouchPoints>0));
+let observedTouch=false;
+const coarsePointer=matchMedia('(pointer:coarse)');
+const touchMode=()=>settings.touch==='on'||(settings.touch!=='off'&&(observedTouch||coarsePointer.matches||navigator.maxTouchPoints>0));
+// A real touch is stronger evidence than a browser's reported pointer capability.
+document.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&!observedTouch){observedTouch=true;setTouch();}},{capture:true,passive:true});
+coarsePointer.addEventListener?.('change',()=>setTouch());
 function setTouch(){document.body.classList.toggle('touch-mode',touchMode());$('autoButton').textContent=`AUTO-FIRE ${settings.autoFire?'ON':'OFF'}`;$('autoButton').setAttribute('aria-pressed',String(settings.autoFire));}
 function toast(text,delay=3200){$('toast').textContent=text;$('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),delay);}
 function banner(text){$('waveBanner').textContent=text;$('waveBanner').classList.add('visible');clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>$('waveBanner').classList.remove('visible'),1900);}
@@ -158,7 +163,7 @@ async function enableOffline(){
   registration=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});await navigator.serviceWorker.ready;$('offlineStatus').innerHTML='<i></i> OFFLINE READY';
   if(registration.waiting)toast('A game update is ready. Install it from Settings between sessions.',5500);
   registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('Update ready. Your current run is unchanged.',5000);});});
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloading&&registration?.active&&sessionStorage.getItem('deadblock-update')){reloading=true;sessionStorage.removeItem('deadblock-update');location.reload();}});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{let requested=false;try{requested=!!sessionStorage.getItem('deadblock-update');}catch{}if(!reloading&&registration?.active&&requested){reloading=true;try{sessionStorage.removeItem('deadblock-update');}catch{}location.reload();}});
  }catch{$('offlineStatus').innerHTML='<i></i> ONLINE / CACHE UNAVAILABLE';}
 }
 // Keep update activation explicit; never refresh a live run automatically.
