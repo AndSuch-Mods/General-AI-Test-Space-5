@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#18241e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Deadblock">
+<meta name="description" content="An original Boxhead-inspired zombie survival game. Blocky hordes, eight guns, explosive defenses, and one life. Built for touch and keyboard.">
+<title>Deadblock | Last stand</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="apple-touch-icon" href="./icon.png">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<canvas id="gameCanvas" aria-label="Zombie survival arena. Move with the left stick or WASD; aim and fire with the right stick or mouse."></canvas>
+<main id="menu">
+  <header class="menu-top"><div class="brand"><span class="brand-block"></span> ANDSUCH / ARCADE</div><button class="text-button" data-action="help">Field manual <span>↗</span></button></header>
+  <section class="hero">
+    <p class="eyebrow"><span class="signal"></span> ENDLESS ZOMBIE SURVIVAL</p>
+    <h1>DEAD<br><span>BLOCK.</span></h1>
+    <p class="hero-sub">One room. One life.<br>Make it count.</p>
+    <div class="menu-actions"><button id="continueButton" class="primary" data-action="continue" hidden>Continue run <span>→</span></button><button id="newButton" class="primary" data-action="new">New game <span>→</span></button></div>
+    <p id="saveSummary" class="save-summary">One automatic save. Death ends the run.</p>
+    <div class="menu-links"><button class="text-button" data-action="settings">Settings</button><button class="text-button" data-action="install">Install on iPhone</button><button class="text-button" data-action="about">About</button></div>
+  </section>
+  <aside class="scene-note"><span>FIELD RULE 01</span><strong>Keep moving.<br>They won't stop.</strong><i></i><p>Earn your arsenal.<br>Build your last line of defense.</p></aside>
+  <footer class="menu-bottom"><span id="recordSummary">NO RUNS ON RECORD</span><span id="offlineStatus">WEB EDITION / v1.0.0</span></footer>
+</main>
+<section id="hud" hidden aria-label="Game status">
+  <div class="hud-top">
+    <div class="vitals"><div class="hud-label">VITALS <strong id="healthNumber">120 / 120</strong></div><div id="healthBar" class="health-bar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="120" aria-valuenow="120"><i></i></div><span id="arenaName" class="tiny">THE YARD</span></div>
+    <div class="wave-readout"><span class="hud-label">WAVE</span><strong id="waveNumber">01</strong><span id="enemyNumber" class="tiny">15 HOSTILES</span></div>
+    <div class="hud-right"><div class="score-readout"><span class="hud-label">SCORE</span><strong id="scoreNumber">000000</strong><span id="cashNumber">0 CR</span></div><button id="pauseButton" data-action="pause" class="icon-button" aria-label="Pause game"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg></button></div>
+  </div>
+  <div id="comboReadout" class="combo-readout"><span id="comboNumber">×0 CHAIN</span><div><i id="comboFill"></i></div></div>
+  <span id="saveIndicator" class="save-indicator">AUTOSAVE</span>
+</section>
+<section id="controls" hidden aria-label="Game controls">
+  <div id="weaponDock" aria-label="Equipped weapons"></div>
+  <div id="actionBar">
+    <button id="dashButton" data-action="dash" title="Dash (Shift)"><span class="action-symbol">»</span><small id="dashLabel">DASH</small></button>
+    <button id="grenadeButton" data-action="grenade" title="Grenade (G)"><span class="action-symbol">✦</span><small id="grenadeLabel">FRAG · 3</small></button>
+    <button id="placeButton" data-action="place" title="Place selected defense (B)"><span class="action-symbol">▣</span><small id="placeLabel">BARREL · 2</small></button>
+    <button id="buildCycle" data-action="cycleBuild" title="Cycle defense (T)" aria-label="Cycle defense type">↻</button>
+  </div>
+  <button id="autoButton" data-action="auto" aria-pressed="true">AUTO FIRE <b>ON</b></button>
+  <div id="moveStick" class="stick left-stick" role="group" aria-label="Movement joystick"><div class="stick-ring"><i></i><span>MOVE</span></div></div>
+  <div id="aimStick" class="stick right-stick" role="group" aria-label="Aim and fire joystick"><div class="stick-ring"><i></i><span>AIM / FIRE</span></div></div>
+  <div id="desktopHint">WASD move <span>·</span> Mouse aim/fire <span>·</span> Q/E weapons <span>·</span> Shift dash <span>·</span> G grenade <span>·</span> B build</div>
+</section>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="storageWarning" role="alert" hidden></div>
+<dialog id="panel" aria-labelledby="panelTitle"><div id="panelContent"></div></dialog>
+<div id="boot">Loading the arena…</div>
+<noscript><div class="no-script">This game needs JavaScript enabled. No account or installation is required.</div></noscript>
+<script type="module" src="./src/app.js"></script>
+</body>
+</html>
