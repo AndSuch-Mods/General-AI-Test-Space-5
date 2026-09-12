@@ -12,7 +12,7 @@ export class Game {
     this.blocked=new Uint8Array(36*25);
     for(let y=0;y<25;y++) for(let x=0;x<36;x++) {
       const px=x*40+20,py=y*40+20;
-      this.blocked[y*36+x]=this.map.walls.some(w=>circleRect(px,py,22,w))?1:0;
+      this.blocked[y*36+x]=this.map.walls.some(w=>circleRect(px,py,33,w))?1:0;
     }
     this.hash=new Map();
   }
@@ -235,7 +235,8 @@ export class Game {
       if(e.fire>0){e.fire-=dt;this.damageEnemy(e,15*dt*(1+s.upgrades.power*.15),0,0);if(e.hp<=0)continue;}
       let dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy),len=dist||1;
       const see=this.sight(e,p);
-      if(!see) {
+      const walkClear=this.wallHit(e.x,e.y,p.x,p.y,e.r+3)===Infinity;
+      if(!walkClear) {
         const cx=clamp((e.x/40)|0,0,35),cy=clamp((e.y/40)|0,0,24);let best=Infinity,bx=cx,by=cy;
         for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++) {
           const nx=cx+xx,ny=cy+yy;if(nx<0||nx>=36||ny<0||ny>=25||(xx===0&&yy===0))continue;
@@ -284,7 +285,7 @@ export class Game {
     for(const b of s.projectiles) {
       if(b.life<=0)continue;
       const nx=b.x+b.vx*dt,ny=b.y+b.vy*dt;let t=this.wallHit(b.x,b.y,nx,ny,b.r),def=null;
-      if(b.kind==='rocket')for(const e of s.enemies)if(e.hp>0)t=Math.min(t,segmentCircle(b.x,b.y,nx,ny,e.x,e.y,e.r+b.r));
+      if(b.kind==='rocket'){for(const e of s.enemies)if(e.hp>0)t=Math.min(t,segmentCircle(b.x,b.y,nx,ny,e.x,e.y,e.r+b.r));for(const d of s.defenses)if(d.hp>0&&d.kind==='barrel')t=Math.min(t,segmentCircle(b.x,b.y,nx,ny,d.x,d.y,d.r+b.r));}
       if(b.kind==='fireball') {
         const pp=segmentCircle(b.x,b.y,nx,ny,p.x,p.y,p.r+b.r);
         if(pp<t){t=pp;def='player';}
@@ -318,7 +319,8 @@ export function validState(s) {
   if(!s.upgrades||UPGRADES.some(u=>!Number.isInteger(s.upgrades[u.id])||s.upgrades[u.id]<0||s.upgrades[u.id]>u.max))return false;
   if(!s.inventory||['barrel','mine','wall','turret'].some(k=>!Number.isInteger(s.inventory[k])||s.inventory[k]<0||s.inventory[k]>99)||!(s.build in s.inventory))return false;
   for(const k of ['x','y','r','hp','maxHp','angle','fire','hurt','dash','dashTime','dashX','dashY','grenadeCd','placeCd','walk'])if(typeof p[k]!=='number')return false;
-  for(const k of ['wave','rng','elapsed','score','kills','cash','combo','comboTime','bestCombo','nextId','countdown','remaining','spawnTimer','grenades'])if(typeof s[k]!=='number'||s[k]<0)return false;
+  for(const k of ['wave','rng','elapsed','score','kills','cash','combo','comboTime','bestCombo','nextId','countdown','remaining','grenades'])if(typeof s[k]!=='number'||s[k]<0)return false;
+  if(typeof s.spawnTimer!=='number')return false;
   if(s.enemies.some(e=>!ENEMIES[e.kind]||!(e.hp>0)||!['x','y','r','angle','maxHp','attack','shoot','telegraph','fire','flash','walk','fuse'].every(k=>typeof e[k]==='number')))return false;
   if(s.defenses.some(d=>!['barrel','mine','wall','turret'].includes(d.kind)||!['x','y','hp','r','maxHp','armed','fire','ammo','angle'].every(k=>typeof d[k]==='number')))return false;
   const finite=(v,depth=0)=>{if(depth>12)return false;if(typeof v==='number')return Number.isFinite(v);if(Array.isArray(v))return v.every(x=>finite(x,depth+1));if(v&&typeof v==='object')return Object.values(v).every(x=>finite(x,depth+1));return ['string','boolean','undefined'].includes(typeof v)||v===null;};
