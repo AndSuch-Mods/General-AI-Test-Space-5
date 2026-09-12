@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#d5d7ca"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Deadblock">
+<meta name="description" content="An original Boxhead-inspired zombie arena game. Ten weapons, eighteen rooms, classic combo progression, survival upgrades, and one automatic save. Built for touch and keyboard.">
+<title>Deadblock Rooms</title>
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icons/apple-touch-icon.png"><link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<canvas id="world" aria-label="Zombie survival arena"></canvas>
+<section id="menu" class="menu" aria-label="Main menu">
+<header class="masthead"><a class="brand" href="./" aria-label="Deadblock Rooms home"><span class="brand-cube">D</span><span>DEADBLOCK <b>ROOMS</b></span></a><span id="offlineStatus" class="status"><i></i> LOCAL / SINGLE PLAYER</span></header>
+<div class="menu-content">
+<div class="intro"><div class="eyebrow">ROOMS / SURVIVAL / NO SECOND CHANCES</div><h1>DEAD<br><span>BLOCK</span><small>ROOMS</small></h1><p class="tagline">Keep moving.<br>Make every shot count.</p><div class="spec-line"><span>10 WEAPONS</span><span>18 ROOMS</span><span>ONE LIFE</span></div></div>
+<div class="launch-panel"><div class="panel-heading"><span class="eyebrow">FIELD BRIEFING</span><span class="issue">01 / 18</span></div>
+<div class="room-card"><div id="mapPreview" class="map-preview"></div><div><h2 id="roomName">Outpost</h2><p id="roomDescription">Four covers. Open lanes. A good place to begin.</p></div></div>
+<div class="setup-grid"><label>Room<select id="mapSelect" aria-label="Room"></select></label><label>Difficulty<select id="difficultySelect"><option value="relaxed">Relaxed</option><option value="normal" selected>Normal</option><option value="nightmare">Nightmare</option></select></label><label>Progression<select id="modeSelect"><option value="survival">Survival / cash shop</option><option value="classic">Classic / kill combos</option></select></label><label>Survivor<select id="skinSelect"></select></label></div>
+<div class="run-options"><label><input id="devilsOption" type="checkbox" checked> Devils</label><label><input id="selfDamageOption" type="checkbox"> Explosive self-damage</label></div>
+<p id="modeHint" class="small-note">Earn credits. Buy weapons and upgrades between waves.</p>
+<button id="continueButton" class="button primary" hidden>Continue run <span>↗</span></button>
+<button id="startButton" class="button primary" disabled>Loading game…</button>
+<p id="saveSummary" class="save-summary">One automatic save. Death ends the run.</p>
+<div class="menu-tools"><button id="helpButton" class="text-button">How to play</button><button id="settingsButton" class="text-button">Settings</button><button id="installButton" class="text-button">Install on iPhone</button></div>
+<div id="records" class="records"></div><div id="notice" class="notice" role="alert" hidden></div>
+</div></div>
+<footer class="menu-footer"><span>Original homage to Boxhead: 2Play Rooms. Not an official port.</span><span id="buildLabel">BUILD 1.0.0 · NO ADS · NO ACCOUNT</span></footer>
+</section>
+<div id="gameUI" class="game-ui" hidden>
+<header class="hud"><div class="health-panel"><div class="hud-label">VITALS <strong id="healthText">100 / 100</strong></div><div class="health-track"><div id="healthFill"></div></div><span id="cashText" class="cash">0 CR</span><span id="saveIndicator" class="save-indicator">AUTOSAVE ON</span></div>
+<div class="wave-panel"><div class="hud-label">WAVE <strong id="waveText">01</strong></div><div id="enemyText" class="enemies">16 HOSTILES</div></div>
+<div class="score-panel"><span class="hud-label">SCORE</span><strong id="scoreText">000000</strong><button id="pauseButton" class="pause-button" aria-label="Pause game">Ⅱ</button></div></header>
+<div id="comboPanel" class="combo-panel"><b id="comboText">×0</b><span>CHAIN</span><div><i id="comboFill"></i></div><small id="unlockText"></small></div>
+<div id="waveBanner" class="wave-banner" aria-live="polite"></div>
+<div id="weaponBar" class="weapon-bar" aria-label="Weapons"></div>
+<div id="touchControls" class="touch-controls"><div id="movePad" class="stick" aria-label="Movement joystick"><div class="stick-cross"></div><div class="knob"></div><span>MOVE</span></div><div class="center-actions"><button id="grenadeButton" class="field-button" aria-label="Throw grenade">GRENADE <b id="grenadeCount">—</b></button><button id="detonateButton" class="field-button" aria-label="Detonate remote charges">DETONATE <b id="chargeCount">0</b></button></div><div class="aim-controls"><button id="autoButton" class="auto-button" aria-pressed="true">AUTO-FIRE ON</button><div id="aimPad" class="stick aim-stick" aria-label="Aim and fire joystick"><div class="stick-cross"></div><div class="knob"></div><span>AIM + FIRE</span></div></div><button id="useButton" class="use-button" hidden>PLACE</button></div>
+<div id="desktopHint" class="desktop-hint">WASD / arrows move · Mouse aims · Click / space fires · 1–0 weapons · Q/E cycle · G grenade · X detonate · P pause</div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<dialog id="dialog" aria-labelledby="dialogTitle"><div id="dialogBody"></div></dialog>
+<div id="bootStatus" class="boot-status" role="status">Loading room…</div>
+<noscript><div class="fatal">This game needs JavaScript enabled in your browser.</div></noscript>
+<script type="module" src="./app.js"></script>
+</body></html>
