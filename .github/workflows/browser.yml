@@ -1,0 +1,34 @@
+name: Browser checks
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Build app icons and run simulation tests
+        run: |
+          python3 scripts/build_icons.py
+          npm test
+      - name: Install test browsers
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.63.0
+          npx playwright install --with-deps chromium webkit
+      - name: Test desktop, phone, saves, and offline play
+        run: node tests/browser.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: browser-checks
+          path: qa
+          retention-days: 14
