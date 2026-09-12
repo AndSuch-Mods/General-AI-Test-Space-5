@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "Deadblock: Last stand",
+  "short_name": "Deadblock",
+  "description": "An original blocky zombie survival game. One room, one life, one automatic save.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#18241e",
+  "theme_color": "#18241e",
+  "icons": [{"src":"./icon.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}],
+  "categories": ["games"],
+  "lang": "en"
+}
