@@ -1,4 +1,4 @@
-"""Real local-HTTP tests in Chromium and WebKit, including offline caching."""
+"""Real HTTP browser tests. Screenshots and failures are saved as CI artifacts."""
 from functools import partial
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -34,6 +34,7 @@ try:
                     page.locator('#newButton').click()
                     page.screenshot(path=str(OUT/f'{engine}-{name}-setup.png'))
                     page.locator('[data-action="begin"]').click()
+                    page.wait_for_function('!!__deadblock.game && !__deadblock.paused')
                     page.evaluate('__deadblock.game.s.countdown=0; __deadblock.game.s.player.hurt=20')
                     x0 = page.evaluate('__deadblock.game.s.player.x')
                     if mobile:
@@ -65,7 +66,7 @@ try:
                     elapsed=page.evaluate('__deadblock.game.s.elapsed')
                     page.wait_for_timeout(150)
                     assert page.evaluate('__deadblock.game.s.elapsed')==elapsed
-                    page.locator('[data-action="resume"]').click()
+                    page.get_by_role('button',name='Resume run →',exact=True).click()
                     page.evaluate("const g=__deadblock.game;g.s.phase='shop';g.s.cash=20000;__deadblock.showShop()")
                     for weapon in ['smg','shotgun','carbine','flamer','railgun','launcher','minigun']:
                         page.locator(f'[data-action="buy"][data-id="{weapon}"]').click()
@@ -91,7 +92,7 @@ try:
                     expect(page.locator('#panelTitle')).to_have_text('End of the line.')
                     assert page.evaluate('(key)=>localStorage.getItem(key)',KEY) is None
                     page.screenshot(path=str(OUT/f'{engine}-{name}-death.png'))
-                    page.locator('[data-action="menu"]').click()
+                    page.get_by_role('button',name='Main menu',exact=True).click()
                     expect(page.locator('#continueButton')).to_be_hidden()
                     page.locator('#newButton').click()
                     page.locator('[data-action="begin"]').click()
@@ -109,6 +110,8 @@ try:
                     print(engine,name,'PASS',flush=True)
                 except Exception:
                     page.screenshot(path=str(OUT/f'{engine}-{name}-failure.png'))
+                    (OUT/f'{engine}-{name}-failure.html').write_text(page.content())
+                    (OUT/f'{engine}-{name}-errors.json').write_text(json.dumps(errors,indent=2))
                     raise
                 finally:
                     context.close()

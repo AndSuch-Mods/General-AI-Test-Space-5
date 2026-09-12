@@ -66,7 +66,7 @@ export class Game {
   }
   neighbors(x,y) {
     const a=[],cx=(x/80)|0,cy=(y/80)|0;
-    for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++){const b=this.hash.get((cx+i)+','+(cy+j));if(b)a.push(...b);}return a;
+    for(let j=-1;j<=1;j++)for(let i=-1;i<=1;i++){const b=this.hash.get((cx+i)+','+((cy+j)));if(b)a.push(...b);}return a;
   }
   spawn(kind) {
     const s=this.s,w=s.wave;
@@ -155,7 +155,7 @@ export class Game {
     const mark={x:e.x,y:e.y,size:e.r*(1.3+this.random()),seed:this.random()};s.marks.push(mark);if(s.marks.length>110)s.marks.shift();
     this.emit('kill',{x:e.x,y:e.y,kind:e.kind,combo:s.combo});
     if(e.kind==='bomber')this.explode(e.x,e.y,100,95,'enemy');
-    if(e.kind==='boss') { this.emit('notice',{text:'Warden down. +300 credits.'});s.pickups.push({x:e.x,y:e.y,kind:'health',life:60}); }
+    if(e.kind==='boss') { this.emit('notice',{text:'Warden down. +300 credits.'});if(s.pickups.length>=60)s.pickups.shift();s.pickups.push({x:e.x,y:e.y,kind:'health',life:60}); }
     if(this.random()<.18&&s.pickups.length<60)s.pickups.push({x:e.x,y:e.y,kind:this.random()<.36?'health':'ammo',life:45});
     for(const [at,cash,text] of [[10,100,'10 chain! +100 credits'],[25,250,'25 chain! Faster firing +250 credits'],[50,500,'50 chain! +15% damage +500 credits'],[100,1000,'100 chain! +1,000 credits']]) {
       if(s.combo>=at&&!s.rewards.includes(at)){s.rewards.push(at);s.cash+=cash;this.emit('milestone',{text});}
@@ -300,7 +300,7 @@ export class Game {
       if(b.life<=0){if(b.kind==='rocket'||b.kind==='grenade')this.explode(b.x,b.y,b.kind==='rocket'?160:150,b.damage,'player');else{if(def==='player')this.damagePlayer(b.damage);else if(def)this.damageDefense(def,b.damage);this.emit('spark',{x:b.x,y:b.y});}}
     }
     for(const drop of s.pickups){drop.life-=dt;const d=distance(drop,p);if(drop.life>0&&d<70+s.upgrades.magnet*45&&this.sight(drop,p)){if(d<28)this.collect(drop);else{drop.x+=(p.x-drop.x)*Math.min(1,dt*9);drop.y+=(p.y-drop.y)*Math.min(1,dt*9);}}}
-    s.enemies=s.enemies.filter(e=>e.hp>0);s.bullets=s.bullets.filter(b=>b.life>0&&b.x>0&&b.x<WORLD.w&&b.y>0&&b.y<WORLD.h).slice(-700);s.projectiles=s.projectiles.filter(b=>b.life>0).slice(-350);s.defenses=s.defenses.filter(d=>d.hp>0);s.pickups=s.pickups.filter(d=>d.life>0);
+    s.enemies=s.enemies.filter(e=>e.hp>0);s.bullets=s.bullets.filter(b=>b.life>0&&b.x>0&&b.x<WORLD.w&&b.y>0&&b.y<WORLD.h).slice(-700);s.projectiles=s.projectiles.filter(b=>b.life>0).slice(-350);s.defenses=s.defenses.filter(d=>d.hp>0);s.pickups=s.pickups.filter(d=>d.life>0).slice(-60);
     if(s.phase==='active'&&s.remaining===0&&s.enemies.length===0) {
       for(const drop of s.pickups)this.collect(drop);s.pickups=[];s.projectiles=[];s.bullets=[];
       const reward=60+s.wave*22;s.cash+=reward;p.hp=Math.min(p.maxHp,p.hp+10);
@@ -315,7 +315,8 @@ export function validState(s) {
   const p=s.player;
   if(!p||!(p.hp>0)||!(p.maxHp>=p.hp)||p.maxHp>500||p.x<0||p.x>WORLD.w||p.y<0||p.y>WORLD.h||!GUN[s.weapon])return false;
   for(const [k,max] of [['enemies',120],['bullets',700],['projectiles',350],['defenses',32],['pickups',60],['marks',110],['owned',8],['rewards',4]])if(!Array.isArray(s[k])||s[k].length>max)return false;
-  if(!s.owned.includes('pistol')||!s.owned.includes(s.weapon)||s.owned.some(k=>!GUN[k])||!s.ammo||s.owned.some(k=>typeof s.ammo[k]!=='number'))return false;
+  if(!s.owned.includes('pistol')||!s.owned.includes(s.weapon)||s.owned.some(k=>!GUN[k])||!s.ammo||s.owned.some(k=>typeof s.ammo[k]==='number')===false)return false;
+  if(!s.owned.every(k=>typeof s.ammo[k]==='number'))return false;
   if(!s.upgrades||UPGRADES.some(u=>!Number.isInteger(s.upgrades[u.id])||s.upgrades[u.id]<0||s.upgrades[u.id]>u.max))return false;
   if(!s.inventory||['barrel','mine','wall','turret'].some(k=>!Number.isInteger(s.inventory[k])||s.inventory[k]<0||s.inventory[k]>99)||!(s.build in s.inventory))return false;
   for(const k of ['x','y','r','hp','maxHp','angle','fire','hurt','dash','dashTime','dashX','dashY','grenadeCd','placeCd','walk'])if(typeof p[k]!=='number')return false;
