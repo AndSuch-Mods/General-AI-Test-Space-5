@@ -1,0 +1,36 @@
+name: Verify game
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Build original PNG icons
+        run: python3 scripts/build_icons.py
+      - name: Check JavaScript syntax
+        run: for file in *.js; do node --check "$file"; done
+      - name: Run simulation and save-state tests
+        run: node --test tests/*.test.js | tee test-results.txt
+      - name: Package source for browser testing
+        if: always()
+        run: |
+          mkdir -p bundle
+          cp *.js *.html *.css *.json *.webmanifest *.svg README.md .nojekyll bundle/
+          cp -r icons scripts tests bundle/
+          cp test-results.txt bundle/ 2>/dev/null || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: deadblock-source
+          path: bundle/
+          include-hidden-files: true
+          retention-days: 7
