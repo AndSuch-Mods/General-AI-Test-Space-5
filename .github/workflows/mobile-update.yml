@@ -31,7 +31,10 @@ jobs:
           python -m pip install playwright==1.62.0
           python -m playwright install --with-deps chromium webkit
       - name: Verify mobile controls and saves
-        run: python tests/browser.py
+        run: |
+          mkdir -p test-results
+          set -o pipefail
+          python tests/browser.py 2>&1 | tee test-results/browser-output.txt
       - name: Commit tested source to staging only
         run: |
           git config user.name 'github-actions[bot]'
