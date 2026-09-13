@@ -1,13 +1,12 @@
 name: Verify Deadblock
 on:
   push:
-    branches: [deadblock-ios-survival-20260912, main]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
-  pages: read
 concurrency:
   group: deadblock-verify-${{ github.ref }}
   cancel-in-progress: true
@@ -25,33 +24,16 @@ jobs:
           find src -name '*.js' -print0 | xargs -0 -n1 node --check
           node --check sw.js
           npm test
-      - name: Read Pages configuration
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python - <<'PY'
-          import os,json
-          from urllib.request import Request,urlopen
-          request=Request('https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']+'/pages',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
-          try:
-              with urlopen(request,timeout=20) as response:
-                  data=json.load(response)
-              print(json.dumps({key:data.get(key) for key in ['html_url','status','build_type','source','https_enforced']},indent=2))
-          except Exception as error:
-              print('Pages configuration read:',type(error).__name__,str(error))
-          PY
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Install test browsers
+      - name: Install browsers
         run: |
           python -m pip install playwright==1.62.0
           python -m playwright install --with-deps chromium webkit
-      - name: Check WebKit lifecycle
-        run: python tests/diagnose_webkit.py
-      - name: Test layouts, controls, save lifecycle, and offline play
+      - name: Test layouts, controls, upgrades, saves and offline play
         run: python tests/browser.py
-      - name: Verify published GitHub Pages game
+      - name: Verify the actual published GitHub Pages game
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: python tests/live.py
       - uses: actions/upload-artifact@v4
@@ -60,22 +42,3 @@ jobs:
           name: deadblock-test-results
           path: test-results
           if-no-files-found: ignore
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: deadblock-source
-          include-hidden-files: true
-          path: |
-            src
-            index.html
-            styles.css
-            manifest.webmanifest
-            sw.js
-            icon.svg
-            icon.png
-            README.md
-            package.json
-            tests
-            .nojekyll
-            .github/workflows/verify.yml
-          if-no-files-found: error
