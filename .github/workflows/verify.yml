@@ -32,10 +32,15 @@ jobs:
           python -m pip install playwright==1.62.0
           python -m playwright install --with-deps chromium webkit
       - name: Test layouts, controls, upgrades, saves and offline play
-        run: python tests/browser.py
+        run: |
+          mkdir -p test-results
+          set -o pipefail
+          xvfb-run -a python tests/browser.py 2>&1 | tee test-results/browser-output.txt
       - name: Verify the actual published GitHub Pages game
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        run: python tests/live.py
+        run: |
+          set -o pipefail
+          xvfb-run -a python tests/live.py 2>&1 | tee test-results/live-output.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p test-results
           set -o pipefail
-          python tests/browser.py 2>&1 | tee test-results/browser-output.txt
+          xvfb-run -a python tests/browser.py 2>&1 | tee test-results/browser-output.txt
       - name: Commit tested source to staging only
         run: |
           git config user.name 'github-actions[bot]'
