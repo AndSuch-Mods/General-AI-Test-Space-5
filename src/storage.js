@@ -26,7 +26,7 @@ export class SaveStore {
     let best={score:0,wave:0,kills:0};try{best={...best,...JSON.parse(this.storage.getItem(RECORD_KEY)||'{}')};if(score!==undefined){best.score=Math.max(best.score,score);best.wave=Math.max(best.wave,wave);best.kills=Math.max(best.kills,kills);this.storage.setItem(RECORD_KEY,JSON.stringify(best));}}catch{}return best;
   }
   settings(value) {
-    const defaults={sound:true,auto:true,blood:true,shake:true,quality:'high'};
-    try{if(value)this.storage.setItem(SETTINGS_KEY,JSON.stringify(value));return {...defaults,...JSON.parse(this.storage.getItem(SETTINGS_KEY)||'{}')};}catch{return value||defaults;}
+    const defaults={sound:true,blood:true,shake:true,quality:'high'};
+    try{if(value)this.storage.setItem(SETTINGS_KEY,JSON.stringify(value));const saved=JSON.parse(this.storage.getItem(SETTINGS_KEY)||'{}');return Object.fromEntries(Object.entries(defaults).map(([k,v])=>[k,saved[k]??v]));}catch{return value||defaults;}
   }
 }

@@ -1,25 +1,35 @@
-import { WORLD, MAPS, DIFFICULTIES, GUN, WEAPONS, UPGRADES, SUPPLIES, ENEMIES, UPGRADE_PRICE, clamp, distance, segmentCircle, segmentRect, circleRect } from './data.js';
+import { WORLD, MAP_SCALE, MAPS, DIFFICULTIES, GUN, WEAPONS, UPGRADES, SUPPLIES, ENEMIES, UPGRADE_PRICE, clamp, distance, segmentCircle, segmentRect, circleRect } from './data.js';
 
 // Simulation has no DOM dependency. All gameplay randomness lives in the saved state.
 export class Game {
   constructor(state) {
+    // Upgrade the single existing save in memory; identity, purchases and progress survive.
+    if(!state.worldVersion){
+      state=JSON.parse(JSON.stringify(state));
+      for(const entity of [state.player,...state.enemies,...state.bullets,...state.projectiles,...state.defenses,...state.pickups,...state.marks]){
+        for(const k of ['x','px','bx'])if(Number.isFinite(entity[k]))entity[k]*=MAP_SCALE.x;
+        for(const k of ['y','py','by'])if(Number.isFinite(entity[k]))entity[k]*=MAP_SCALE.y;
+      }
+      state.worldVersion=2;
+    }
     this.s=state;
     this.map=MAPS.find(m=>m.id===state.map);
     this.difficulty=DIFFICULTIES[state.difficulty];
     this.events=[];
     this.flowTime=0;
-    this.flow=new Int16Array(36*25);
-    this.blocked=new Uint8Array(36*25);
-    for(let y=0;y<25;y++) for(let x=0;x<36;x++) {
+    this.cols=WORLD.w/WORLD.cell;this.rows=WORLD.h/WORLD.cell;
+    this.flow=new Int16Array(this.cols*this.rows);
+    this.blocked=new Uint8Array(this.cols*this.rows);
+    for(let y=0;y<this.rows;y++) for(let x=0;x<this.cols;x++) {
       const px=x*40+20,py=y*40+20;
-      this.blocked[y*36+x]=this.map.walls.some(w=>circleRect(px,py,33,w))?1:0;
+      this.blocked[y*this.cols+x]=this.map.walls.some(w=>circleRect(px,py,33,w))?1:0;
     }
     this.hash=new Map();
   }
   static create(map='yard',difficulty='normal',seed=Date.now()) {
     const m=MAPS.find(v=>v.id===map)||MAPS[0];
     const d=DIFFICULTIES[difficulty]||DIFFICULTIES.normal;
-    const state={schema:1,id:`${Date.now().toString(36)}-${(seed>>>0).toString(36)}`,map:m.id,difficulty:DIFFICULTIES[difficulty]?difficulty:'normal',rng:(seed>>>0)||1234567,phase:'active',wave:0,elapsed:0,score:0,kills:0,cash:0,combo:0,bestCombo:0,comboTime:0,rewards:[],nextId:1,countdown:0,remaining:0,spawnTimer:0,bossPending:false,grenades:3,inventory:{barrel:2,mine:2,wall:3,turret:0},upgrades:{power:0,cycle:0,vitality:0,armor:0,boots:0,magnet:0},owned:['pistol'],ammo:{pistol:-1},weapon:'pistol',build:'barrel',player:{x:m.spawn[0],y:m.spawn[1],r:15,hp:d.hp,maxHp:d.hp,angle:-Math.PI/2,fire:0,hurt:0,dash:0,dashTime:0,dashX:0,dashY:0,grenadeCd:0,placeCd:0,walk:0},enemies:[],bullets:[],projectiles:[],defenses:[],pickups:[],marks:[]};
+    const state={schema:1,worldVersion:2,id:`${Date.now().toString(36)}-${(seed>>>0).toString(36)}`,map:m.id,difficulty:DIFFICULTIES[difficulty]?difficulty:'normal',rng:(seed>>>0)||1234567,phase:'active',wave:0,elapsed:0,score:0,kills:0,cash:0,combo:0,bestCombo:0,comboTime:0,rewards:[],nextId:1,countdown:0,remaining:0,spawnTimer:0,bossPending:false,grenades:3,inventory:{barrel:2,mine:2,wall:3,turret:0},upgrades:{power:0,cycle:0,vitality:0,armor:0,boots:0,magnet:0},owned:['pistol'],ammo:{pistol:-1},weapon:'pistol',build:'barrel',player:{x:m.spawn[0],y:m.spawn[1],r:15,hp:d.hp,maxHp:d.hp,angle:-Math.PI/2,fire:0,hurt:0,dash:0,dashTime:0,dashX:0,dashY:0,grenadeCd:0,placeCd:0,walk:0},enemies:[],bullets:[],projectiles:[],defenses:[],pickups:[],marks:[]};
     const game=new Game(state); game.nextWave(); return game;
   }
   random() { let x=this.s.rng|0; x^=x<<13; x^=x>>>17; x^=x<<5; this.s.rng=x>>>0; return (x>>>0)/4294967296; }
@@ -45,18 +55,18 @@ export class Game {
   }
   updateFlow() {
     this.flow.fill(-1); const p=this.s.player;
-    let ix=clamp(Math.floor(p.x/40),0,35),iy=clamp(Math.floor(p.y/40),0,24),start=iy*36+ix;
+    let ix=clamp(Math.floor(p.x/40),0,this.cols-1),iy=clamp(Math.floor(p.y/40),0,this.rows-1),start=iy*this.cols+ix;
     if(this.blocked[start]) {
       let best=Infinity;
-      for(let y=Math.max(0,iy-2);y<=Math.min(24,iy+2);y++)for(let x=Math.max(0,ix-2);x<=Math.min(35,ix+2);x++)if(!this.blocked[y*36+x]) {
-        const dd=(x*40+20-p.x)**2+(y*40+20-p.y)**2;if(dd<best){best=dd;start=y*36+x;}
+      for(let y=Math.max(0,iy-2);y<=Math.min(this.rows-1,iy+2);y++)for(let x=Math.max(0,ix-2);x<=Math.min(this.cols-1,ix+2);x++)if(!this.blocked[y*this.cols+x]) {
+        const dd=(x*40+20-p.x)**2+(y*40+20-p.y)**2;if(dd<best){best=dd;start=y*this.cols+x;}
       }
     }
-    const queue=new Int16Array(900);let head=0,tail=1;queue[0]=start;this.flow[start]=0;
+    const queue=new Int16Array(this.cols*this.rows);let head=0,tail=1;queue[0]=start;this.flow[start]=0;
     while(head<tail) {
-      const i=queue[head++],x=i%36,y=(i/36)|0;
+      const i=queue[head++],x=i%this.cols,y=(i/this.cols)|0;
       for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]) {
-        if(nx<0||nx>=36||ny<0||ny>=25)continue;const j=ny*36+nx;
+        if(nx<0||nx>=this.cols||ny<0||ny>=this.rows)continue;const j=ny*this.cols+nx;
         if(this.blocked[j]||this.flow[j]>=0)continue;this.flow[j]=this.flow[i]+1;queue[tail++]=j;
       }
     }
@@ -75,10 +85,13 @@ export class Game {
       kind=w>=7&&r<.12?'bomber':w>=4&&r<.23?'cinder':w>=3&&r<.38?'brute':w>=2&&r<.59?'runner':'walker';
     }
     const spec=ENEMIES[kind];let x=24,y=24;
-    for(let i=0;i<12;i++) {
-      const side=(this.random()*4)|0;
-      if(side===0){x=35;y=35+this.random()*(WORLD.h-70);}if(side===1){x=WORLD.w-35;y=35+this.random()*(WORLD.h-70);}
-      if(side===2){x=35+this.random()*(WORLD.w-70);y=35;}if(side===3){x=35+this.random()*(WORLD.w-70);y=WORLD.h-35;}
+    const lanes=this.map.approaches?.length?this.map.approaches:['N','S','E','W'];
+    for(let i=0;i<18;i++) {
+      const side=lanes[(this.random()*lanes.length)|0];
+      if(side==='W'){x=35;y=35+this.random()*(WORLD.h-70);}
+      if(side==='E'){x=WORLD.w-35;y=35+this.random()*(WORLD.h-70);}
+      if(side==='N'){x=35+this.random()*(WORLD.w-70);y=35;}
+      if(side==='S'){x=35+this.random()*(WORLD.w-70);y=WORLD.h-35;}
       if(distance({x,y},s.player)>330)break;
     }
     const hp=Math.round(spec.hp*(1+(w-1)*(kind==='boss'?.13:.075)));
@@ -156,7 +169,18 @@ export class Game {
     this.emit('kill',{x:e.x,y:e.y,kind:e.kind,combo:s.combo});
     if(e.kind==='bomber')this.explode(e.x,e.y,100,95,'enemy');
     if(e.kind==='boss') { this.emit('notice',{text:'Warden down. +300 credits.'});if(s.pickups.length>=60)s.pickups.shift();s.pickups.push({x:e.x,y:e.y,kind:'health',life:60}); }
-    if(this.random()<.18&&s.pickups.length<60)s.pickups.push({x:e.x,y:e.y,kind:this.random()<.36?'health':'ammo',life:45});
+    if(s.pickups.length<60){
+      const roll=this.random();
+      let kind=null;
+      if(roll<.09) kind='health';
+      else if(roll<.16) kind='ammo';
+      else if(roll<.19) kind='grenade';
+      else if(roll<.215) kind='barrel';
+      else if(roll<.228) kind='mine';
+      else if(roll<.238) kind='wall';
+      else if(roll<.242) kind='turret';
+      if(kind) s.pickups.push({x:e.x,y:e.y,kind,life:45});
+    }
     for(const [at,cash,text] of [[10,100,'10 chain! +100 credits'],[25,250,'25 chain! Faster firing +250 credits'],[50,500,'50 chain! +15% damage +500 credits'],[100,1000,'100 chain! +1,000 credits']]) {
       if(s.combo>=at&&!s.rewards.includes(at)){s.rewards.push(at);s.cash+=cash;this.emit('milestone',{text});}
     }
@@ -205,9 +229,14 @@ export class Game {
     this.emit('purchase');return true;
   }
   collect(drop) {
+    if(drop.life<=0)return;
     const s=this.s,p=s.player;
-    if(drop.kind==='health')p.hp=Math.min(p.maxHp,p.hp+28);
-    else for(const id of s.owned)if(GUN[id].ammo>0)s.ammo[id]=Math.min(GUN[id].ammo,s.ammo[id]+Math.ceil(GUN[id].ammo*.16));
+    if(drop.kind==='health'){p.hp=Math.min(p.maxHp,p.hp+28);}
+    else if(drop.kind==='ammo'){
+      for(const id of s.owned)if(GUN[id].ammo>0)s.ammo[id]=Math.min(GUN[id].ammo,s.ammo[id]+Math.ceil(GUN[id].ammo*.16));
+    }else if(drop.kind==='grenade'){s.grenades=Math.min(99,s.grenades+1);}
+    else if(Object.hasOwn(s.inventory,drop.kind)){s.inventory[drop.kind]=Math.min(99,s.inventory[drop.kind]+1);}
+    else return;
     this.emit('pickup',{x:drop.x,y:drop.y,kind:drop.kind});drop.life=0;
   }
   tick(dt,input={}) {
@@ -222,9 +251,8 @@ export class Game {
     const steps=p.dashTime>0?3:1;
     for(let i=0;i<steps;i++)this.move(p,(p.dashTime>0?p.dashX*820:mx*speed)*dt/steps,(p.dashTime>0?p.dashY*820:my*speed)*dt/steps);
     if(n>.1)p.walk+=dt*(p.dashTime>0?30:14);
-    const target=input.auto?this.target(p,GUN[s.weapon].range):null;
-    if(input.aim!==undefined&&input.aim!==null)p.angle=input.aim;else if(target)p.angle=Math.atan2(target.y-p.y,target.x-p.x);else if(n>.15&&!input.fire)p.angle=Math.atan2(my,mx);
-    if(input.fire||target)this.shoot(p.angle);
+    if(Number.isFinite(input.aim))p.angle=input.aim;else if(n>.15&&!input.fire)p.angle=Math.atan2(my,mx);
+    if(input.fire)this.shoot(p.angle);
     this.flowTime-=dt;if(this.flowTime<=0){this.updateFlow();this.flowTime=.38;}
     s.spawnTimer-=dt;
     if(s.remaining>0&&s.enemies.length<120&&s.spawnTimer<=0){this.spawn(s.bossPending?'boss':null);s.bossPending=false;s.remaining--;s.spawnTimer=Math.max(.09,.52-s.wave*.017);}
@@ -237,11 +265,11 @@ export class Game {
       const see=this.sight(e,p);
       const walkClear=this.wallHit(e.x,e.y,p.x,p.y,e.r+3)===Infinity;
       if(!walkClear) {
-        const cx=clamp((e.x/40)|0,0,35),cy=clamp((e.y/40)|0,0,24);let best=Infinity,bx=cx,by=cy;
+        const cx=clamp((e.x/40)|0,0,this.cols-1),cy=clamp((e.y/40)|0,0,this.rows-1);let best=Infinity,bx=cx,by=cy;
         for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++) {
-          const nx=cx+xx,ny=cy+yy;if(nx<0||nx>=36||ny<0||ny>=25||(xx===0&&yy===0))continue;
-          if(xx&&yy&&(this.blocked[cy*36+nx]||this.blocked[ny*36+cx]))continue;
-          const v=this.flow[ny*36+nx];if(v>=0&&v<best){best=v;bx=nx;by=ny;}
+          const nx=cx+xx,ny=cy+yy;if(nx<0||nx>=this.cols||ny<0||ny>=this.rows||(xx===0&&yy===0))continue;
+          if(xx&&yy&&(this.blocked[cy*this.cols+nx]||this.blocked[ny*this.cols+cx]))continue;
+          const v=this.flow[ny*this.cols+nx];if(v>=0&&v<best){best=v;bx=nx;by=ny;}
         }
         dx=bx*40+20-e.x;dy=by*40+20-e.y;len=Math.hypot(dx,dy)||1;
       }
@@ -312,6 +340,8 @@ export class Game {
 
 export function validState(s) {
   if(!s||s.schema!==1||typeof s.id!=='string'||!MAPS.some(m=>m.id===s.map)||!DIFFICULTIES[s.difficulty]||!['active','shop'].includes(s.phase))return false;
+  if(s.worldVersion!==undefined&&s.worldVersion!==2)return false;
+  if(!Array.isArray(s.pickups)||s.pickups.some(d=>!['health','ammo','grenade','barrel','mine','wall','turret'].includes(d.kind)||!['x','y','life'].every(k=>Number.isFinite(d[k]))))return false;
   const p=s.player;
   if(!p||!(p.hp>0)||!(p.maxHp>=p.hp)||p.maxHp>500||p.x<0||p.x>WORLD.w||p.y<0||p.y>WORLD.h||!GUN[s.weapon])return false;
   for(const [k,max] of [['enemies',120],['bullets',700],['projectiles',350],['defenses',32],['pickups',60],['marks',110],['owned',8],['rewards',4]])if(!Array.isArray(s[k])||s[k].length>max)return false;

@@ -27,7 +27,7 @@
     <div class="menu-links"><button class="text-button" data-action="settings">Settings</button><button class="text-button" data-action="install">Install on iPhone</button><button class="text-button" data-action="about">About</button></div>
   </section>
   <aside class="scene-note"><span>FIELD RULE 01</span><strong>Keep moving.<br>They won't stop.</strong><i></i><p>Earn your arsenal.<br>Build your last line of defense.</p></aside>
-  <footer class="menu-bottom"><span id="recordSummary">NO RUNS ON RECORD</span><span id="offlineStatus">WEB EDITION / v1.0.0</span></footer>
+  <footer class="menu-bottom"><span id="recordSummary">NO RUNS ON RECORD</span><span id="offlineStatus">WEB EDITION / v1.1.0</span></footer>
 </main>
 <section id="hud" hidden aria-label="Game status">
   <div class="hud-top">
@@ -39,17 +39,17 @@
   <span id="saveIndicator" class="save-indicator">AUTOSAVE</span>
 </section>
 <section id="controls" hidden aria-label="Game controls">
-  <div id="weaponDock" aria-label="Equipped weapons"></div>
-  <div id="actionBar">
-    <button id="dashButton" data-action="dash" title="Dash (Shift)"><span class="action-symbol">»</span><small id="dashLabel">DASH</small></button>
-    <button id="grenadeButton" data-action="grenade" title="Grenade (G)"><span class="action-symbol">✦</span><small id="grenadeLabel">FRAG · 3</small></button>
-    <button id="placeButton" data-action="place" title="Place selected defense (B)"><span class="action-symbol">▣</span><small id="placeLabel">BARREL · 2</small></button>
-    <button id="buildCycle" data-action="cycleBuild" title="Cycle defense (T)" aria-label="Cycle defense type">↻</button>
+  <div id="loadoutBar">
+    <div id="actionBar">
+      <button id="dashButton" data-action="dash" title="Dash (Shift)"><span class="action-symbol">»</span><small id="dashLabel">DASH</small></button>
+      <button id="grenadeButton" data-action="grenade" title="Grenade (G)"><span class="action-symbol">✦</span><small id="grenadeLabel">FRAG · 3</small></button>
+      <button id="placeButton" data-action="place" title="Place selected defense (B)"><span class="action-symbol">▣</span><small id="placeLabel">BARREL · 2</small></button>
+    </div>
+    <div id="weaponDock" aria-label="Equipped weapon"></div>
   </div>
-  <button id="autoButton" data-action="auto" aria-pressed="true">AUTO FIRE <b>ON</b></button>
   <div id="moveStick" class="stick left-stick" role="group" aria-label="Movement joystick"><div class="stick-ring"><i></i><span>MOVE</span></div></div>
   <div id="aimStick" class="stick right-stick" role="group" aria-label="Aim and fire joystick"><div class="stick-ring"><i></i><span>AIM / FIRE</span></div></div>
-  <div id="desktopHint">WASD move <span>·</span> Mouse aim/fire <span>·</span> Q/E weapons <span>·</span> Shift dash <span>·</span> G grenade <span>·</span> B build</div>
+  <div id="desktopHint">WASD move <span>·</span> Mouse aim <span>·</span> Hold click or Space to fire <span>·</span> Q/E weapons <span>·</span> Shift dash <span>·</span> G frag <span>·</span> B deploy <span>·</span> M more</div>
 </section>
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="storageWarning" role="alert" hidden></div>

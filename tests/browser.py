@@ -30,14 +30,14 @@ results=[]
 try:
  with sync_playwright() as pw:
   for engine in os.environ.get('BROWSERS','chromium,webkit').split(','):
-   opts={'headless':True}
+   opts={'headless':engine!='webkit'}
    if engine=='chromium' and os.environ.get('CHROMIUM_PATH'):opts['executable_path']=os.environ['CHROMIUM_PATH']
    browser=getattr(pw,engine).launch(**opts)
    for name,w,h in [('desktop',1365,900),('portrait',390,844),('landscape',844,390),('small-landscape',667,375)]:
     context=browser.new_context(viewport={'width':w,'height':h},has_touch=name!='desktop',is_mobile=name!='desktop')
     page=context.new_page();errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
     try:
-     page.goto(BASE+'?test=1');page.wait_for_function('!!window.__deadblock')
+     page.goto(BASE+'?test=1');page.bring_to_front();page.wait_for_function('!!window.__deadblock')
      page.locator('#newButton').click();assert page.locator('[data-map]').count()==6
      page.screenshot(path=str(OUT/f'{engine}-{name}-maps.png'))
      page.locator('[data-action="begin"]').click()
@@ -51,7 +51,7 @@ try:
       assert b['x']>=0 and b['x']+b['w']<=w+1 and b['y']>=0 and b['y']+b['h']<=h+1,boxes
       assert b['w']>=44 and b['h']>=44,boxes
       for a in boxes[i+1:]:assert not (min(a['x']+a['w'],b['x']+b['w'])>max(a['x'],b['x'])+.5 and min(a['y']+a['h'],b['y']+b['h'])>max(a['y'],b['y'])+.5),boxes
-     x0=page.evaluate('__deadblock.game.s.player.x')
+     x0=page.evaluate('__deadblock.game.s.player.x');move_id=page.evaluate('__deadblock.game.s.id')
      if name=='desktop':
       page.keyboard.down('d');page.keyboard.down(' ');page.wait_for_timeout(250);page.keyboard.up('d');page.keyboard.up(' ')
      else:
@@ -64,7 +64,7 @@ try:
        cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
       else:
        page.mouse.move(pad['x']+pad['width']/2+25,pad['y']+pad['height']/2);page.mouse.down();page.wait_for_timeout(250);page.mouse.up()
-     assert page.evaluate('__deadblock.game.s.player.x')>x0+10
+     assert page.evaluate('__deadblock.game.s.player.x')>x0+10, page.evaluate('({x:__deadblock.game.s.player.x,id:__deadblock.game.s.id,paused:__deadblock.paused,countdown:__deadblock.game.s.countdown,elapsed:__deadblock.game.s.elapsed,hidden:document.hidden,visibility:document.visibilityState,renderTime:__deadblock.renderer.time,focus:document.activeElement?.outerHTML,inputs:__deadblock.currentInput()})')
      page.wait_for_timeout(60);assert page.evaluate('__deadblock.currentInput().fire') is False
      page.locator('#weaponDock [data-action="loadout"]').last.click();assert page.evaluate('__deadblock.paused')
      page.locator('[data-action="chooseBuild"][data-id="mine"]').click()
@@ -81,14 +81,14 @@ try:
      restored=page.evaluate('__deadblock.game.s')
      for field in ['id','wave','owned','ammo','cash','grenades','upgrades','inventory']:assert saved[field]==restored[field],field
      page.locator('[data-action="next"]').click();page.evaluate('__deadblock.game.s.countdown=0;__deadblock.game.s.player.hurt=10000')
-     page.wait_for_timeout(200);page.screenshot(path=str(OUT/f'{engine}-{name}-game.png'))
+     page.wait_for_timeout(200);page.evaluate('__deadblock.game.s.player.hurt=0');page.wait_for_timeout(30);page.screenshot(path=str(OUT/f'{engine}-{name}-game.png'))
      page.evaluate("__deadblock.game.s.player.hurt=0;__deadblock.game.damagePlayer(99999);__deadblock.processEvents()")
      assert page.evaluate('__deadblock.store.read()') is None
      page.get_by_role('button',name='Main menu',exact=True).click();expect(page.locator('#continueButton')).to_be_hidden()
      assert not errors,errors
      results.append({'browser':engine,'layout':name,'passed':True});print(engine,name,'PASS',flush=True)
     except Exception as error:
-     print('FAIL',engine,name,str(error),errors,flush=True)
+     print('FAIL',engine,name,str(error),errors,flush=True);(OUT/f'{engine}-{name}-error.txt').write_text(str(error)+chr(10)+str(errors))
      try:page.screenshot(path=str(OUT/f'{engine}-{name}-FAIL.png'))
      except Exception:pass
      raise
@@ -99,7 +99,16 @@ try:
    page.wait_for_function('navigator.serviceWorker.controller!==null')
    page.locator('#newButton').click();page.locator('[data-action="begin"]').click();page.wait_for_timeout(2400)
    page.locator('#pauseButton').click();saved=page.evaluate('(k)=>JSON.parse(localStorage.getItem(k)).data',KEY)
-   legacy=False;page.goto(BASE);page.wait_for_function("async()=>{const keys=await caches.keys();return keys.includes('deadblock-survival-1.1.0')&&!keys.includes('deadblock-survival-1.0.0')}",timeout=45000);page.goto(BASE+'update.html');page.locator('#install').click();page.wait_for_url('**/?v=1.1.0',timeout=60000)
+   legacy=False;page.goto(BASE);page.evaluate("""async()=>{
+    const reg=await navigator.serviceWorker.getRegistration();await reg.update();
+    const deadline=Date.now()+45000;
+    while(Date.now()<deadline){
+     const keys=await caches.keys();
+     if(keys.includes('deadblock-survival-1.1.0')&&!keys.includes('deadblock-survival-1.0.0')&&reg.active?.state==='activated'&&navigator.serviceWorker.controller===reg.active)return true;
+     await new Promise(resolve=>setTimeout(resolve,150));
+    }
+    throw Error('Updated cache exists but its worker did not take control');
+   }""");page.goto(BASE+'update.html');page.locator('#install').click();page.wait_for_url('**/?v=1.1.0',timeout=60000)
    page.locator('#continueButton').click();page.locator('#pauseButton').click()
    after=page.evaluate('(k)=>JSON.parse(localStorage.getItem(k)).data',KEY);assert saved['id']==after['id']
    page.locator('[data-action="menu"]').click();network=False;page.reload(wait_until='load')

@@ -1,12 +1,74 @@
 // Original game data. No assets or source from the Boxhead games are used.
-export const VERSION = '1.0.0';
-export const WORLD = { w: 1440, h: 1000, cell: 40 };
+export const VERSION = '1.1.0';
+export const WORLD = { w: 2160, h: 1520, cell: 40 };
+export const MAP_SCALE = {x:1.5,y:1.52};
 export const MAPS = [
-  { id: 'yard', name: 'The yard', tag: 'ROOM TO RUN', description: 'An open killing floor. Learn to circle the horde.', floor: '#777867', line: '#858573', accent: '#d9b755', walls: [[280,250,160,95],[1000,250,160,95],[280,660,160,95],[1000,660,160,95]], spawn: [720,500] },
-  { id: 'cross', name: 'Crossfire', tag: 'FOUR CORNERS', description: 'Wide lanes, blind corners, and very few second chances.', floor: '#727877', line: '#808784', accent: '#84c6b7', walls: [[230,200,310,200],[900,200,310,200],[230,650,310,170],[900,650,310,170]], spawn: [720,500] },
-  { id: 'pillars', name: 'Dead works', tag: 'BREAK THEIR SIGHT', description: 'Thread the columns. Turn a crowd into a line.', floor: '#82796a', line: '#918775', accent: '#dc9573', walls: [[280,240,90,90],[675,200,90,90],[1070,240,90,90],[280,650,90,90],[675,710,90,90],[1070,650,90,90],[485,440,90,100],[870,440,90,100]], spawn: [720,490] },
-  { id: 'bunker', name: 'Last shelter', tag: 'HOLD THE GAP', description: 'A broken bunker. Defenses buy time, not safety.', floor: '#686f67', line: '#798075', accent: '#b3be79', walls: [[360,250,255,70],[825,250,255,70],[360,250,70,180],[1010,250,70,180],[360,650,255,70],[825,650,255,70],[360,540,70,180],[1010,540,70,180]], spawn: [720,480] }
+  {
+    id: 'yard',
+    name: 'The yard',
+    tag: 'ALL SIDES',
+    flow: 'N • S • E • W',
+    description: 'An open killing floor with room to kite. Hostiles push in from every edge.',
+    floor: '#777867', line: '#858573', accent: '#d9b755',
+    walls: [[280,250,160,95],[1000,250,160,95],[280,660,160,95],[1000,660,160,95]],
+    spawn: [720,500], approaches: ['N','S','E','W']
+  },
+  {
+    id: 'cross',
+    name: 'Crossfire',
+    tag: 'PINCH POINTS',
+    flow: 'CORNERS',
+    description: 'Wide lanes, blind corners, and pressure from every side. Use the blocks to break sight.',
+    floor: '#727877', line: '#808784', accent: '#84c6b7',
+    walls: [[230,200,310,200],[900,200,310,200],[230,650,310,170],[900,650,310,170]],
+    spawn: [720,500], approaches: ['N','S','E','W']
+  },
+  {
+    id: 'pillars',
+    name: 'Dead works',
+    tag: 'NORTH / SOUTH',
+    flow: 'TOP + BOTTOM',
+    description: 'Thread the columns and split the wave. Most pressure comes from the north and south lanes.',
+    floor: '#82796a', line: '#918775', accent: '#dc9573',
+    walls: [[280,240,90,90],[675,200,90,90],[1070,240,90,90],[280,650,90,90],[675,710,90,90],[1070,650,90,90],[485,440,90,100],[870,440,90,100]],
+    spawn: [720,490], approaches: ['N','S']
+  },
+  {
+    id: 'bunker',
+    name: 'Last shelter',
+    tag: 'EAST / WEST',
+    flow: 'SIDE RUSH',
+    description: 'A broken bunker with two hard side entries. Hold lanes, but do not get trapped.',
+    floor: '#686f67', line: '#798075', accent: '#b3be79',
+    walls: [[360,250,255,70],[825,250,255,70],[360,250,70,180],[1010,250,70,180],[360,650,255,70],[825,650,255,70],[360,540,70,180],[1010,540,70,180]],
+    spawn: [720,480], approaches: ['E','W']
+  },
+  {
+    id: 'gauntlet',
+    name: 'The gauntlet',
+    tag: 'RUN THE LANE',
+    flow: 'EAST / WEST',
+    description: 'A brutal corridor arena with staggered cover. Enemies slam in from both long ends.',
+    floor: '#6a706f', line: '#7a827f', accent: '#d68f66',
+    walls: [[370,170,110,120],[370,710,110,120],[660,315,120,110],[660,575,120,110],[960,170,110,120],[960,710,110,120]],
+    spawn: [720,500], approaches: ['E','W']
+  },
+  {
+    id: 'ritual',
+    name: 'Red rite',
+    tag: 'TRI-ENTRY',
+    flow: 'N • E • W',
+    description: 'A ritual square with broken barricades. You get breathing room below, but the top and sides stay hot.',
+    floor: '#726760', line: '#897c74', accent: '#c76d67',
+    walls: [[230,240,220,80],[990,240,220,80],[360,525,190,95],[890,525,190,95],[640,330,160,70]],
+    spawn: [720,720], approaches: ['N','E','W']
+  }
 ];
+// Geometry is expanded; characters, movement speed and weapon ranges stay unchanged.
+for (const m of MAPS) {
+  m.walls=m.walls.map(([x,y,w,h])=>[x*MAP_SCALE.x,y*MAP_SCALE.y,w*MAP_SCALE.x,h*MAP_SCALE.y]);
+  m.spawn=[m.spawn[0]*MAP_SCALE.x,m.spawn[1]*MAP_SCALE.y];
+}
 export const DIFFICULTIES = {
   casual: { name: 'Casual', hp: 160, damage: .65, speed: .88, count: .85, text: 'More health. A little breathing room.' },
   normal: { name: 'Survival', hp: 120, damage: 1, speed: 1, count: 1, text: 'The intended fight. One life, no rewind.' },
@@ -41,14 +103,23 @@ export const SUPPLIES = [
   { id:'turret', name:'Sentry turret', price:350, description:'An automatic ally with 450 rounds.' }
 ];
 export const ENEMIES = {
-  walker: { name:'Shambler', hp:50, speed:64, damage:13, radius:14, reward:12, score:100, body:'#adb9ab', head:'#bec5b2' },
-  runner: { name:'Runner', hp:38, speed:124, damage:11, radius:12, reward:16, score:150, body:'#b7a875', head:'#d1c59a' },
-  brute: { name:'Brute', hp:255, speed:44, damage:26, radius:23, reward:40, score:400, body:'#667a72', head:'#8a9b7e' },
-  cinder: { name:'Cinder', hp:140, speed:58, damage:18, radius:17, reward:35, score:350, body:'#a94e40', head:'#d37659' },
-  bomber: { name:'Bloater', hp:85, speed:78, damage:45, radius:18, reward:26, score:260, body:'#a5a353', head:'#c6c478' },
-  boss: { name:'The warden', hp:1100, speed:47, damage:34, radius:30, reward:300, score:4000, body:'#7c4941', head:'#ad7a57' }
+  walker: { name:'Shambler', hp:50, speed:64, damage:13, radius:14, reward:12, score:100, body:'#c9d7c0', head:'#e3d3ad', eye:'#3f241a' },
+  runner: { name:'Runner', hp:38, speed:124, damage:11, radius:12, reward:16, score:150, body:'#d0bc84', head:'#ead7a9', eye:'#41251d' },
+  brute: { name:'Brute', hp:255, speed:44, damage:26, radius:23, reward:40, score:400, body:'#7c877e', head:'#99a58f', eye:'#291f1f' },
+  cinder: { name:'Cinder', hp:140, speed:58, damage:18, radius:17, reward:35, score:350, body:'#d2473d', head:'#ef5b49', eye:'#fff1ae' },
+  bomber: { name:'Bloater', hp:85, speed:78, damage:45, radius:18, reward:26, score:260, body:'#b9ae7a', head:'#d0c28e', eye:'#533b28' },
+  boss: { name:'The warden', hp:1100, speed:47, damage:34, radius:30, reward:300, score:4000, body:'#a53232', head:'#d84945', eye:'#fff1ae' }
 };
 export const BUILD_TYPES = ['barrel','mine','wall','turret'];
+export const PICKUP_LABEL = {
+  health: '+ HEALTH',
+  ammo: '+ AMMO',
+  grenade: '+ FRAG',
+  barrel: '+ BARREL',
+  mine: '+ MINE',
+  wall: '+ WALL',
+  turret: '+ TURRET'
+};
 export const UPGRADE_PRICE = (u, level) => Math.round(u.price * Math.pow(1.65,level));
 export const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 export const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);

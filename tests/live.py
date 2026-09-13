@@ -27,10 +27,10 @@ for path in FILES:
  else:raise AssertionError('Live asset differs from repository: '+path)
  assets.append({'path':path,'sha256':hashlib.sha256(data).hexdigest(),'matched':True})
 with sync_playwright() as pw:
- browser=pw.webkit.launch(headless=True)
+ browser=pw.webkit.launch(headless=False)
  context=browser.new_context(viewport={'width':844,'height':390},is_mobile=True,has_touch=True)
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.goto(BASE+'?v=1.1.0');expect(page).to_have_title('Deadblock | Last stand')
+ page.goto(BASE+'?v=1.1.0');page.bring_to_front();expect(page).to_have_title('Deadblock | Last stand')
  assert page.evaluate('typeof window.__deadblock')=='undefined'
  page.wait_for_function("document.getElementById('offlineStatus').textContent.includes('1.1.0')")
  page.locator('#newButton').click();assert page.locator('[data-map]').count()==6
