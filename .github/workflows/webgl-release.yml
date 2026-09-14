@@ -1,115 +1,23 @@
-name: Verify 3D overhaul
+name: 3D visual review
 on:
-  push:
-    branches: [deadblock-3d-1-4]
   workflow_dispatch:
 permissions:
-  contents: write
-concurrency:
-  group: deadblock-webgl
-  cancel-in-progress: true
+  contents: read
 jobs:
-  verify:
+  visual:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Apply reviewed renderer integration and visual corrections
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import subprocess
-          p=Path('scripts/apply_3d_integration.py')
-          if p.exists():
-              p.write_text(p.read_text().replace('geMMmgKXK','geMmgKXK').replace('LsevJesMtNm','LsevJesNtNm'))
-              subprocess.run(['python',str(p)],check=True)
-          p=Path('scripts/refine_3d_art.py')
-          if p.exists():subprocess.run(['python',str(p)],check=True)
-          PY
-          mkdir -p test-results
-          git diff 30994df7b8619d77960790af276aad53dd7229cc --stat | tee test-results/changes.txt
-          test -z "$(git diff 30994df7b8619d77960790af276aad53dd7229cc --name-only -- src/engine.js src/storage.js src/defenses.js)"
-      - name: Syntax and simulation regression tests
-        run: |
-          set -o pipefail
-          find src -name '*.js' -print0 | xargs -0 -n1 node --check
-          npm test 2>&1 | tee test-results/simulation-output.txt
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Install test browsers
-        run: |
+      - run: |
           python -m pip install playwright==1.62.0
           python -m playwright install --with-deps chromium webkit
-      - name: Render seven models and stress the actual WebGL scene
-        id: webgl
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          xvfb-run -a python tests/webgl.py 2>&1 | tee test-results/webgl-output.txt
+      - run: xvfb-run -a python tests/webgl.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: deadblock-3d-visual-review
-          path: |
-            test-results/*3d*.png
-            test-results/webgl-results.json
-            test-results/webgl-output.txt
-          if-no-files-found: ignore
-      - name: Mobile controls, preparation, rotation, saves and offline play
-        id: browser
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          xvfb-run -a python tests/browser.py 2>&1 | tee test-results/browser-output.txt
-      - name: Require both browser suites to pass
-        if: steps.webgl.outcome != 'success' || steps.browser.outcome != 'success'
-        run: exit 1
-      - name: Commit tested readable integration to the build branch
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src tests index.html styles.css models.html sw.js package.json release.json README.md update.html .github/workflows/verify.yml
-          for f in scripts/apply_3d_integration.py scripts/refine_3d_art.py; do
-            if [ -f "$f" ]; then git rm -f "$f"; fi
-          done
-          if ! git diff --cached --quiet; then
-            git commit -m 'Integrate and verify detailed WebGL models, angled camera and save-safe 1.4.0 release'
-            git push origin HEAD:deadblock-3d-1-4
-          fi
-          git rev-parse HEAD | tee test-results/tested-commit.txt
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: deadblock-3d-checks
+          name: visual-review
           path: test-results
-          if-no-files-found: ignore
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: deadblock-3d-source
-          include-hidden-files: true
-          path: |
-            vendor
-            src
-            assets
-            scripts
-            tests
-            index.html
-            models.html
-            styles.css
-            icon.png
-            icon.svg
-            manifest.webmanifest
-            sw.js
-            release.json
-            package.json
-            README.md
-            update.html
-            .github/workflows
-            .nojekyll
