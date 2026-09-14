@@ -27,7 +27,7 @@
     <div class="menu-links"><button class="text-button" data-action="settings">Settings</button><button class="text-button" data-action="install">Install on iPhone</button><button class="text-button" data-action="about">About</button></div>
   </section>
   <aside class="scene-note"><span>FIELD RULE 01</span><strong>Keep moving.<br>They won't stop.</strong><i></i><p>Earn your arsenal.<br>Build your last line of defense.</p></aside>
-  <footer class="menu-bottom"><span id="recordSummary">NO RUNS ON RECORD</span><span id="offlineStatus">WEB EDITION / v1.1.0</span></footer>
+  <footer class="menu-bottom"><span id="recordSummary">NO RUNS ON RECORD</span><span id="offlineStatus">WEB EDITION / v1.2.0</span></footer>
 </main>
 <section id="hud" hidden aria-label="Game status">
   <div class="hud-top">
@@ -39,6 +39,10 @@
   <span id="saveIndicator" class="save-indicator">AUTOSAVE</span>
 </section>
 <section id="controls" hidden aria-label="Game controls">
+  <div id="prepBar" hidden aria-label="Wave preparation">
+    <span>PREP · NO TIME LIMIT</span><button data-action="shop">Shop</button>
+    <button id="startWaveButton" class="primary" data-action="next">Start wave 1 →</button>
+  </div>
   <div id="loadoutBar">
     <div id="actionBar">
       <button id="dashButton" data-action="dash" title="Dash (Shift)"><span class="action-symbol">»</span><small id="dashLabel">DASH</small></button>
@@ -54,6 +58,13 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="storageWarning" role="alert" hidden></div>
 <dialog id="panel" aria-labelledby="panelTitle"><div id="panelContent"></div></dialog>
+<dialog id="orientationGate" aria-labelledby="orientationTitle">
+  <div class="turn-phone" aria-hidden="true">↷</div>
+  <h2 id="orientationTitle">Turn your phone sideways</h2>
+  <p>Deadblock plays in landscape. Your run is paused while you rotate.</p>
+  <p class="rotation-note">Allow screen rotation in Control Center if the display stays upright.</p>
+  <button data-action="landscape">Try landscape lock</button>
+</dialog>
 <div id="boot">Loading the arena…</div>
 <noscript><div class="no-script">This game needs JavaScript enabled. No account or installation is required.</div></noscript>
 <script type="module" src="./src/app.js"></script>

@@ -1,5 +1,7 @@
 import { WORLD, MAP_SCALE, MAPS, DIFFICULTIES, GUN, WEAPONS, UPGRADES, SUPPLIES, ENEMIES, UPGRADE_PRICE, clamp, distance, segmentCircle, segmentRect, circleRect } from './data.js';
 
+import {DEFENSE_LIMIT, defenseTouches, defenseHit, defensesOverlap, placementCandidate} from './defenses.js';
+
 // Simulation has no DOM dependency. All gameplay randomness lives in the saved state.
 export class Game {
   constructor(state) {
@@ -24,52 +26,77 @@ export class Game {
       const px=x*40+20,py=y*40+20;
       this.blocked[y*this.cols+x]=this.map.walls.some(w=>circleRect(px,py,33,w))?1:0;
     }
+    this.baseBlocked=this.blocked.slice();
+    this.staticFlow=new Int16Array(this.flow.length);
     this.hash=new Map();
   }
   static create(map='yard',difficulty='normal',seed=Date.now()) {
     const m=MAPS.find(v=>v.id===map)||MAPS[0];
     const d=DIFFICULTIES[difficulty]||DIFFICULTIES.normal;
-    const state={schema:1,worldVersion:2,id:`${Date.now().toString(36)}-${(seed>>>0).toString(36)}`,map:m.id,difficulty:DIFFICULTIES[difficulty]?difficulty:'normal',rng:(seed>>>0)||1234567,phase:'active',wave:0,elapsed:0,score:0,kills:0,cash:0,combo:0,bestCombo:0,comboTime:0,rewards:[],nextId:1,countdown:0,remaining:0,spawnTimer:0,bossPending:false,grenades:3,inventory:{barrel:2,mine:2,wall:3,turret:0},upgrades:{power:0,cycle:0,vitality:0,armor:0,boots:0,magnet:0},owned:['pistol'],ammo:{pistol:-1},weapon:'pistol',build:'barrel',player:{x:m.spawn[0],y:m.spawn[1],r:15,hp:d.hp,maxHp:d.hp,angle:-Math.PI/2,fire:0,hurt:0,dash:0,dashTime:0,dashX:0,dashY:0,grenadeCd:0,placeCd:0,walk:0},enemies:[],bullets:[],projectiles:[],defenses:[],pickups:[],marks:[]};
-    const game=new Game(state); game.nextWave(); return game;
+    const state={schema:1,worldVersion:2,id:`${Date.now().toString(36)}-${(seed>>>0).toString(36)}`,map:m.id,difficulty:DIFFICULTIES[difficulty]?difficulty:'normal',rng:(seed>>>0)||1234567,phase:'prep',wave:0,elapsed:0,score:0,kills:0,cash:0,combo:0,bestCombo:0,comboTime:0,rewards:[],nextId:1,countdown:0,remaining:0,spawnTimer:0,bossPending:false,grenades:3,inventory:{barrel:2,mine:2,wall:3,turret:0},upgrades:{power:0,cycle:0,vitality:0,armor:0,boots:0,magnet:0},owned:['pistol'],ammo:{pistol:-1},weapon:'pistol',build:'barrel',player:{x:m.spawn[0],y:m.spawn[1],r:15,hp:d.hp,maxHp:d.hp,angle:-Math.PI/2,fire:0,hurt:0,dash:0,dashTime:0,dashX:0,dashY:0,grenadeCd:0,placeCd:0,walk:0},enemies:[],bullets:[],projectiles:[],defenses:[],pickups:[],marks:[]};
+    return new Game(state);
   }
   random() { let x=this.s.rng|0; x^=x<<13; x^=x>>>17; x^=x<<5; this.s.rng=x>>>0; return (x>>>0)/4294967296; }
   emit(type,props={}) { if(this.events.length<300) this.events.push({type,...props}); }
   drain() { const e=this.events; this.events=[]; return e; }
   snapshot() { return JSON.parse(JSON.stringify(this.s)); }
   nextWave() {
-    const s=this.s;if(s.phase==='dead')return;
+    const s=this.s;if(s.phase!=='prep')return false;
     s.wave++; s.phase='active'; s.countdown=2.1; s.spawnTimer=.2;
     s.remaining=Math.min(500,Math.round((10+s.wave*4+Math.pow(s.wave,1.2))*this.difficulty.count));
     s.bossPending=s.wave%5===0; s.comboTime=0; s.combo=0;
     s.player.hurt=1; this.flowTime=0;
     this.emit('wave',{wave:s.wave,boss:s.bossPending});
+    return true;
+  }
+  prepare() {
+    if(this.s.phase!=='shop')return false;
+    this.s.phase='prep';this.s.countdown=0;this.flowTime=0;return true;
+  }
+  openShop() {
+    if(this.s.phase!=='prep')return false;
+    this.s.phase='shop';return true;
   }
   wallHit(ax,ay,bx,by,pad=0) {
     let t=Infinity; for(const w of this.map.walls)t=Math.min(t,segmentRect(ax,ay,bx,by,w,pad)); return t;
   }
   sight(a,b) { return this.wallHit(a.x,a.y,b.x,b.y,2)===Infinity; }
   move(o,dx,dy,includeDefenses=true) {
-    const blocked=(x,y)=>this.map.walls.some(w=>circleRect(x,y,o.r,w)) || (includeDefenses&&this.s.defenses.some(d=>d.hp>0&&d.kind!=='mine'&&Math.hypot(x-d.x,y-d.y)<o.r+d.r));
+    const blocked=(x,y)=>this.map.walls.some(w=>circleRect(x,y,o.r,w)) || (includeDefenses&&this.s.defenses.some(d=>d.hp>0&&d.kind!=='mine'&&defenseTouches(d,x,y,o.r)));
     let x=clamp(o.x+dx,o.r+8,WORLD.w-o.r-8); if(!blocked(x,o.y))o.x=x;
     let y=clamp(o.y+dy,o.r+8,WORLD.h-o.r-8); if(!blocked(o.x,y))o.y=y;
   }
-  updateFlow() {
-    this.flow.fill(-1); const p=this.s.player;
-    let ix=clamp(Math.floor(p.x/40),0,this.cols-1),iy=clamp(Math.floor(p.y/40),0,this.rows-1),start=iy*this.cols+ix;
-    if(this.blocked[start]) {
+  buildFlow(blocked, flow) {
+    flow.fill(-1);const p=this.s.player;
+    const ix=clamp(Math.floor(p.x/40),0,this.cols-1),iy=clamp(Math.floor(p.y/40),0,this.rows-1);
+    let start=iy*this.cols+ix;
+    if(blocked[start]) {
       let best=Infinity;
-      for(let y=Math.max(0,iy-2);y<=Math.min(this.rows-1,iy+2);y++)for(let x=Math.max(0,ix-2);x<=Math.min(this.cols-1,ix+2);x++)if(!this.blocked[y*this.cols+x]) {
-        const dd=(x*40+20-p.x)**2+(y*40+20-p.y)**2;if(dd<best){best=dd;start=y*this.cols+x;}
+      for(let y=Math.max(0,iy-3);y<=Math.min(this.rows-1,iy+3);y++)for(let x=Math.max(0,ix-3);x<=Math.min(this.cols-1,ix+3);x++) {
+        const dist=(x*40+20-p.x)**2+(y*40+20-p.y)**2;
+        if(!blocked[y*this.cols+x]&&dist<best){best=dist;start=y*this.cols+x;}
       }
+      if(!Number.isFinite(best))return;
     }
-    const queue=new Int16Array(this.cols*this.rows);let head=0,tail=1;queue[0]=start;this.flow[start]=0;
+    const queue=new Int16Array(flow.length);let head=0,tail=1;queue[0]=start;flow[start]=0;
     while(head<tail) {
       const i=queue[head++],x=i%this.cols,y=(i/this.cols)|0;
       for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]) {
-        if(nx<0||nx>=this.cols||ny<0||ny>=this.rows)continue;const j=ny*this.cols+nx;
-        if(this.blocked[j]||this.flow[j]>=0)continue;this.flow[j]=this.flow[i]+1;queue[tail++]=j;
+        if(nx<0||nx>=this.cols||ny<0||ny>=this.rows)continue;
+        const j=ny*this.cols+nx;if(blocked[j]||flow[j]>=0)continue;
+        flow[j]=flow[i]+1;queue[tail++]=j;
       }
     }
+  }
+  updateFlow() {
+    this.blocked.set(this.baseBlocked);
+    for(const d of this.s.defenses)if(d.hp>0&&d.kind!=='mine') {
+      for(let y=Math.max(0,Math.floor((d.y-d.r-34)/40));y<=Math.min(this.rows-1,Math.floor((d.y+d.r+34)/40));y++)
+      for(let x=Math.max(0,Math.floor((d.x-d.r-34)/40));x<=Math.min(this.cols-1,Math.floor((d.x+d.r+34)/40));x++)
+        if(defenseTouches(d,x*40+20,y*40+20,25))this.blocked[y*this.cols+x]=1;
+    }
+    this.buildFlow(this.baseBlocked,this.staticFlow);
+    this.buildFlow(this.blocked,this.flow);
   }
   rebuildHash() {
     this.hash.clear();for(const e of this.s.enemies)if(e.hp>0){const key=((e.x/80)|0)+','+((e.y/80)|0);if(!this.hash.has(key))this.hash.set(key,[]);this.hash.get(key).push(e);}
@@ -88,11 +115,13 @@ export class Game {
     const lanes=this.map.approaches?.length?this.map.approaches:['N','S','E','W'];
     for(let i=0;i<18;i++) {
       const side=lanes[(this.random()*lanes.length)|0];
-      if(side==='W'){x=35;y=35+this.random()*(WORLD.h-70);}
-      if(side==='E'){x=WORLD.w-35;y=35+this.random()*(WORLD.h-70);}
-      if(side==='N'){x=35+this.random()*(WORLD.w-70);y=35;}
-      if(side==='S'){x=35+this.random()*(WORLD.w-70);y=WORLD.h-35;}
-      if(distance({x,y},s.player)>330)break;
+      const range=this.map.spawnRanges?.[side]||[35,(side==='N'||side==='S'?WORLD.w:WORLD.h)-35];
+      const along=range[0]+this.random()*(range[1]-range[0]);
+      if(side==='W'){x=35;y=along;}
+      if(side==='E'){x=WORLD.w-35;y=along;}
+      if(side==='N'){x=along;y=35;}
+      if(side==='S'){x=along;y=WORLD.h-35;}
+      if(distance({x,y},s.player)>330&&!this.map.walls.some(w=>circleRect(x,y,spec.radius+2,w)))break;
     }
     const hp=Math.round(spec.hp*(1+(w-1)*(kind==='boss'?.13:.075)));
     s.enemies.push({id:s.nextId++,kind,x,y,r:spec.radius,hp,maxHp:hp,angle:0,attack:.5+this.random(),shoot:2+this.random(),telegraph:0,fire:0,flash:0,walk:0,fuse:-1});
@@ -104,7 +133,7 @@ export class Game {
   equip(id) { if(this.s.owned.includes(id)){this.s.weapon=id;this.s.player.fire=Math.max(this.s.player.fire,.08);this.emit('equip');return true;}return false; }
   cycle(dir=1) { const s=this.s,i=s.owned.indexOf(s.weapon);this.equip(s.owned[(i+dir+s.owned.length)%s.owned.length]); }
   dash(mx,my) {
-    const p=this.s.player;if(this.s.phase!=='active'||this.s.countdown>0||p.dash>0)return false;
+    const p=this.s.player;if(!['active','prep'].includes(this.s.phase)||this.s.countdown>0||p.dash>0)return false;
     let n=Math.hypot(mx,my);if(n<.1){mx=Math.cos(p.angle);my=Math.sin(p.angle);n=1;}
     p.dashX=mx/n;p.dashY=my/n;p.dashTime=.19;p.dash=3.5-this.s.upgrades.boots*.22;p.hurt=Math.max(p.hurt,.26);this.emit('dash',{x:p.x,y:p.y});return true;
   }
@@ -114,20 +143,28 @@ export class Game {
     s.projectiles.push({id:s.nextId++,kind:'grenade',x:p.x,y:p.y,vx:Math.cos(p.angle)*390,vy:Math.sin(p.angle)*390,life:.72,maxLife:.72,damage:180*(1+s.upgrades.power*.15),r:5,owner:'player'});
     this.emit('throw');return true;
   }
+  previewPlacement() {
+    const s=this.s,p=s.player,c=placementCandidate(s),{x,y,r}=c;
+    c.valid=x>=40&&x<=WORLD.w-40&&y>=40&&y<=WORLD.h-40
+      && !this.map.walls.some(w=>circleRect(x,y,r+1,w))
+      && !s.defenses.some(d=>d.hp>0&&defensesOverlap(d,c))
+      && !s.enemies.some(e=>e.hp>0&&defenseTouches(c,e.x,e.y,e.r))
+      && !defenseTouches(c,p.x,p.y,p.r);
+    return c;
+  }
   place() {
     const s=this.s,p=s.player,k=s.build;
-    if(s.phase!=='active'||s.countdown>0||p.placeCd>0||s.inventory[k]<=0)return false;
-    if(s.defenses.length>=32){this.emit('notice',{text:'Defense limit reached (32).'});return false;}
-    const r=k==='wall'?25:k==='turret'?21:17,x=p.x+Math.cos(p.angle)*70,y=p.y+Math.sin(p.angle)*70;
-    if(x<40||x>WORLD.w-40||y<40||y>WORLD.h-40||this.map.walls.some(w=>circleRect(x,y,r+5,w))||s.defenses.some(d=>distance(d,{x,y})<d.r+r+8)||s.enemies.some(e=>e.hp>0&&distance(e,{x,y})<e.r+r)) {
-      this.emit('notice',{text:'No room here. Face an open patch.'});return false;
-    }
+    if(!['active','prep'].includes(s.phase)||s.countdown>0||p.placeCd>0||s.inventory[k]<=0)return false;
+    if(s.defenses.length>=DEFENSE_LIMIT){this.emit('notice',{text:`Defense limit reached (${DEFENSE_LIMIT}).`});return false;}
+    const candidate=this.previewPlacement();
+    if(!candidate.valid){this.emit('notice',{text:'No room here. Face an open patch.'});return false;}
     s.inventory[k]--;p.placeCd=.35;
-    s.defenses.push({id:s.nextId++,kind:k,x,y,r,hp:k==='wall'?400:k==='turret'?240:45,maxHp:k==='wall'?400:k==='turret'?240:45,armed:.7,fire:0,ammo:450,angle:p.angle});
-    this.emit('place',{x,y});return true;
+    const hp=k==='wall'?400:k==='turret'?240:45;
+    s.defenses.push({id:s.nextId++,...candidate,hp,maxHp:hp,armed:.7,fire:0,ammo:450,angle:k==='wall'?0:p.angle});
+    this.flowTime=0;this.emit('place',{x:candidate.x,y:candidate.y});return true;
   }
   shoot(angle) {
-    const s=this.s,p=s.player,w=GUN[s.weapon];if(p.fire>0)return;
+    const s=this.s,p=s.player,w=GUN[s.weapon];if(s.phase!=='active'||s.countdown>0||p.fire>0)return;
     if(w.ammo!==-1&&s.ammo[w.id]<=0){this.equip('pistol');this.emit('notice',{text:'Out of ammo. Pistol equipped.'});return;}
     p.fire=w.interval/(1+s.upgrades.cycle*.1+(s.rewards.includes(25)?.08:0));
     if(w.ammo!==-1)s.ammo[w.id]--;
@@ -193,7 +230,7 @@ export class Game {
   }
   damageDefense(d,damage) {
     if(d.hp<=0)return;d.hp-=damage;
-    if(d.hp<=0) { d.hp=0;if(d.kind==='barrel')this.explode(d.x,d.y,145,210,'player');else this.emit('debris',{x:d.x,y:d.y}); }
+    if(d.hp<=0) { d.hp=0;this.flowTime=0;if(d.kind==='barrel')this.explode(d.x,d.y,145,210,'player');else this.emit('debris',{x:d.x,y:d.y}); }
   }
   explode(x,y,r,damage,owner='player') {
     this.emit('explosion',{x,y,r});
@@ -240,10 +277,10 @@ export class Game {
     this.emit('pickup',{x:drop.x,y:drop.y,kind:drop.kind});drop.life=0;
   }
   tick(dt,input={}) {
-    const s=this.s,p=s.player;if(s.phase!=='active')return;
+    const s=this.s,p=s.player;if(!['active','prep'].includes(s.phase))return;
     dt=clamp(dt,0,.034);
     if(s.countdown>0){s.countdown=Math.max(0,s.countdown-dt);return;}
-    s.elapsed+=dt;
+    if(s.phase==='active')s.elapsed+=dt;
     for(const k of ['fire','hurt','dash','dashTime','grenadeCd','placeCd'])p[k]=Math.max(0,p[k]-dt);
     s.comboTime=Math.max(0,s.comboTime-dt);if(!s.comboTime)s.combo=0;
     let mx=input.mx||0,my=input.my||0,n=Math.hypot(mx,my);if(n>1){mx/=n;my/=n;}
@@ -252,6 +289,11 @@ export class Game {
     for(let i=0;i<steps;i++)this.move(p,(p.dashTime>0?p.dashX*820:mx*speed)*dt/steps,(p.dashTime>0?p.dashY*820:my*speed)*dt/steps);
     if(n>.1)p.walk+=dt*(p.dashTime>0?30:14);
     if(Number.isFinite(input.aim))p.angle=input.aim;else if(n>.15&&!input.fire)p.angle=Math.atan2(my,mx);
+    if(s.phase==='prep') {
+      for(const drop of s.pickups)if(drop.life>0&&distance(drop,p)<28&&this.sight(drop,p))this.collect(drop);
+      s.pickups=s.pickups.filter(d=>d.life>0);
+      return;
+    }
     if(input.fire)this.shoot(p.angle);
     this.flowTime-=dt;if(this.flowTime<=0){this.updateFlow();this.flowTime=.38;}
     s.spawnTimer-=dt;
@@ -263,13 +305,18 @@ export class Game {
       if(e.fire>0){e.fire-=dt;this.damageEnemy(e,15*dt*(1+s.upgrades.power*.15),0,0);if(e.hp<=0)continue;}
       let dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy),len=dist||1;
       const see=this.sight(e,p);
-      const walkClear=this.wallHit(e.x,e.y,p.x,p.y,e.r+3)===Infinity;
+      const walkClear=this.wallHit(e.x,e.y,p.x,p.y,e.r+3)===Infinity&&!s.defenses.some(d=>d.hp>0&&d.kind!=='mine'&&defenseHit(d,e.x,e.y,p.x,p.y,e.r+3)!==Infinity);
       if(!walkClear) {
-        const cx=clamp((e.x/40)|0,0,this.cols-1),cy=clamp((e.y/40)|0,0,this.rows-1);let best=Infinity,bx=cx,by=cy;
+        const cx=clamp((e.x/40)|0,0,this.cols-1),cy=clamp((e.y/40)|0,0,this.rows-1);
+        let route=this.flow,blocked=this.blocked;
+        let reachable=false;
+        for(let y=Math.max(0,cy-1);y<=Math.min(this.rows-1,cy+1);y++)for(let x=Math.max(0,cx-1);x<=Math.min(this.cols-1,cx+1);x++)if(route[y*this.cols+x]>=0)reachable=true;
+        if(!reachable){route=this.staticFlow;blocked=this.baseBlocked;}
+        let best=Infinity,bx=cx,by=cy;
         for(let yy=-1;yy<=1;yy++)for(let xx=-1;xx<=1;xx++) {
           const nx=cx+xx,ny=cy+yy;if(nx<0||nx>=this.cols||ny<0||ny>=this.rows||(xx===0&&yy===0))continue;
-          if(xx&&yy&&(this.blocked[cy*this.cols+nx]||this.blocked[ny*this.cols+cx]))continue;
-          const v=this.flow[ny*this.cols+nx];if(v>=0&&v<best){best=v;bx=nx;by=ny;}
+          if(xx&&yy&&(blocked[cy*this.cols+nx]||blocked[ny*this.cols+cx]))continue;
+          const v=route[ny*this.cols+nx];if(v>=0&&v<best){best=v;bx=nx;by=ny;}
         }
         dx=bx*40+20-e.x;dy=by*40+20-e.y;len=Math.hypot(dx,dy)||1;
       }
@@ -333,18 +380,18 @@ export class Game {
       for(const drop of s.pickups)this.collect(drop);s.pickups=[];s.projectiles=[];s.bullets=[];
       const reward=60+s.wave*22;s.cash+=reward;p.hp=Math.min(p.maxHp,p.hp+10);
       for(const id of s.owned)if(GUN[id].ammo>0)s.ammo[id]=Math.min(GUN[id].ammo,s.ammo[id]+Math.ceil(GUN[id].ammo*.12));
-      s.phase='shop';this.emit('clear',{wave:s.wave,reward});
+      s.phase='shop';s.remaining=0;this.emit('clear',{wave:s.wave,reward});
     }
   }
 }
 
 export function validState(s) {
-  if(!s||s.schema!==1||typeof s.id!=='string'||!MAPS.some(m=>m.id===s.map)||!DIFFICULTIES[s.difficulty]||!['active','shop'].includes(s.phase))return false;
+  if(!s||s.schema!==1||typeof s.id!=='string'||!MAPS.some(m=>m.id===s.map)||!DIFFICULTIES[s.difficulty]||!['active','shop','prep'].includes(s.phase))return false;
   if(s.worldVersion!==undefined&&s.worldVersion!==2)return false;
   if(!Array.isArray(s.pickups)||s.pickups.some(d=>!['health','ammo','grenade','barrel','mine','wall','turret'].includes(d.kind)||!['x','y','life'].every(k=>Number.isFinite(d[k]))))return false;
   const p=s.player;
   if(!p||!(p.hp>0)||!(p.maxHp>=p.hp)||p.maxHp>500||p.x<0||p.x>WORLD.w||p.y<0||p.y>WORLD.h||!GUN[s.weapon])return false;
-  for(const [k,max] of [['enemies',120],['bullets',700],['projectiles',350],['defenses',32],['pickups',60],['marks',110],['owned',8],['rewards',4]])if(!Array.isArray(s[k])||s[k].length>max)return false;
+  for(const [k,max] of [['enemies',120],['bullets',700],['projectiles',350],['defenses',DEFENSE_LIMIT],['pickups',60],['marks',110],['owned',8],['rewards',4]])if(!Array.isArray(s[k])||s[k].length>max)return false;
   if(!s.owned.includes('pistol')||!s.owned.includes(s.weapon)||s.owned.some(k=>!GUN[k])||!s.ammo||s.owned.some(k=>typeof s.ammo[k]==='number')===false)return false;
   if(!s.owned.every(k=>typeof s.ammo[k]==='number'))return false;
   if(!s.upgrades||UPGRADES.some(u=>!Number.isInteger(s.upgrades[u.id])||s.upgrades[u.id]<0||s.upgrades[u.id]>u.max))return false;

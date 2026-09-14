@@ -1,5 +1,5 @@
 // Original game data. No assets or source from the Boxhead games are used.
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 export const WORLD = { w: 2160, h: 1520, cell: 40 };
 export const MAP_SCALE = {x:1.5,y:1.52};
 export const MAPS = [
@@ -63,11 +63,19 @@ export const MAPS = [
     walls: [[230,240,220,80],[990,240,220,80],[360,525,190,95],[890,525,190,95],[640,330,160,70]],
     spawn: [720,720], approaches: ['N','E','W']
   }
+  ,{
+    id:'runway', name:'Dead runway', tag:'ONE END ONLY', flow:'WEST → EAST',
+    description:'A long airstrip. Every zombie enters from the west end. Build a line across the tarmac, leave a firing lane, and fall back toward the hangars.',
+    floor:'#616965', line:'#6c7470', accent:'#e1c983',
+    walls:[[0,0,1440,230],[0,770,1440,230],[460,260,90,80],[940,660,90,80]],
+    spawn:[1200,500], approaches:['W'], spawnRanges:{W:[275,725]}
+  }
 ];
 // Geometry is expanded; characters, movement speed and weapon ranges stay unchanged.
 for (const m of MAPS) {
   m.walls=m.walls.map(([x,y,w,h])=>[x*MAP_SCALE.x,y*MAP_SCALE.y,w*MAP_SCALE.x,h*MAP_SCALE.y]);
   m.spawn=[m.spawn[0]*MAP_SCALE.x,m.spawn[1]*MAP_SCALE.y];
+  if(m.spawnRanges)for(const side in m.spawnRanges)m.spawnRanges[side]=m.spawnRanges[side].map(v=>v*(side==='W'||side==='E'?MAP_SCALE.y:MAP_SCALE.x));
 }
 export const DIFFICULTIES = {
   casual: { name: 'Casual', hp: 160, damage: .65, speed: .88, count: .85, text: 'More health. A little breathing room.' },
@@ -97,9 +105,9 @@ export const SUPPLIES = [
   { id:'heal', name:'Field dressing', price:65, description:'Restore 60 health.' },
   { id:'ammo', name:'Ammo resupply', price:100, description:'Fill every weapon you own.' },
   { id:'grenade', name:'Grenades ×3', price:100, description:'Throw toward your aim. Mind the blast.' },
-  { id:'barrel', name:'Explosive barrels ×3', price:85, description:'Place, retreat, and shoot for chain reactions.' },
+  { id:'barrel', name:'Explosive barrels ×3', price:85, description:'Snap barrels into a blocking line, then shoot for chain reactions. Fragile and explosive.' },
   { id:'mine', name:'Proximity mines ×3', price:120, description:'Arm after a moment. Only enemies trigger them.' },
-  { id:'wall', name:'Barricades ×3', price:80, description:'Block a lane. Enemies will tear them down.' },
+  { id:'wall', name:'Structure walls ×3', price:80, description:'400 HP per block. Snap blocks together to divert zombies. Trapped enemies will break through.' },
   { id:'turret', name:'Sentry turret', price:350, description:'An automatic ally with 450 rounds.' }
 ];
 export const ENEMIES = {

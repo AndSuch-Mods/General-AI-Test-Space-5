@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Game,validState} from '../src/engine.js';
 import {SaveStore} from '../src/storage.js';
 import {MAPS,WORLD,MAP_SCALE} from '../src/data.js';
-const ready=()=>{const g=Game.create('yard','normal',123);g.s.countdown=0;g.s.player.hurt=100;g.s.remaining=1;g.s.spawnTimer=100;g.drain();return g;};
+const ready=()=>{const g=Game.create('yard','normal',123);g.nextWave();g.s.countdown=0;g.s.player.hurt=100;g.s.remaining=1;g.s.spawnTimer=100;g.drain();return g;};
 test('player never auto-aims or fires, even with obsolete auto input',()=>{
  const g=ready();g.spawn('walker');const e=g.s.enemies[0];e.x=g.s.player.x+120;e.y=g.s.player.y;g.s.player.angle=-1;
  for(let i=0;i<30;i++)g.tick(1/60,{auto:true});

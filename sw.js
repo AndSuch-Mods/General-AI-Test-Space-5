@@ -1,6 +1,6 @@
 // Only this project's caches are touched. Saves live separately in localStorage.
-const PREFIX='deadblock-survival-',CACHE=PREFIX+'1.1.0';
-const FILES=['./','./index.html','./styles.css','./src/data.js','./src/engine.js','./src/storage.js','./src/renderer.js','./src/audio.js','./src/app.js','./manifest.webmanifest','./icon.svg','./icon.png'];
+const PREFIX='deadblock-survival-',CACHE=PREFIX+'1.2.0';
+const FILES=['./','./index.html','./styles.css','./src/model.js','./src/defenses.js','./src/data.js','./src/engine.js','./src/storage.js','./src/renderer.js','./src/audio.js','./src/app.js','./manifest.webmanifest','./icon.svg','./icon.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'})))).then(()=>self.skipWaiting())));
 // Activate the complete cache immediately, but never reload a running game.
 // Loaded game modules remain in memory; the next navigation gets the new build.

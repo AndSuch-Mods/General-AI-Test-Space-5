@@ -6,10 +6,19 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "any",
+  "orientation": "landscape",
   "background_color": "#18241e",
   "theme_color": "#18241e",
-  "icons": [{"src":"./icon.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}],
-  "categories": ["games"],
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "games"
+  ],
   "lang": "en"
 }
