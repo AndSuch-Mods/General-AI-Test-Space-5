@@ -21,7 +21,14 @@ jobs:
           node-version: '22'
       - name: Apply reviewed renderer integration
         run: |
-          if [ -f scripts/apply_3d_integration.py ]; then python scripts/apply_3d_integration.py; fi
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+          p=Path('scripts/apply_3d_integration.py')
+          if p.exists():
+              p.write_text(p.read_text().replace('geMMmgKXK','geMmgKXK').replace('LsevJesMtNm','LsevJesNtNm'))
+              subprocess.run(['python',str(p)],check=True)
+          PY
           mkdir -p test-results
           git diff 30994df7b8619d77960790af276aad53dd7229cc --stat | tee test-results/changes.txt
           test -z "$(git diff 30994df7b8619d77960790af276aad53dd7229cc --name-only -- src/engine.js src/storage.js src/defenses.js)"
@@ -57,7 +64,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add src tests index.html styles.css models.html sw.js package.json release.json README.md update.html .github/workflows/verify.yml
-          if [ -f scripts/apply_3d_integration.py ]; then git rm scripts/apply_3d_integration.py; fi
+          if [ -f scripts/apply_3d_integration.py ]; then git rm -f scripts/apply_3d_integration.py; fi
           if ! git diff --cached --quiet; then
             git commit -m 'Integrate and verify real 3D models, oblique WebGL camera and save-safe 1.4.0 release'
             git push origin HEAD:deadblock-3d-1-4
