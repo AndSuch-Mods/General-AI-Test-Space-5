@@ -55,9 +55,18 @@ with sync_playwright() as pw:
  page.screenshot(path=str(OUT/'live-portrait-guard.png'))
  page.set_viewport_size({'width':844,'height':390});expect(page.locator('#orientationGate')).to_be_hidden()
  expect(page.locator('#panelTitle')).to_have_text('Catch your breath.')
- # Seed an intermission in this disposable browser context, then exercise the production shop/prep flow.
- page.evaluate('(k)=>{const save=JSON.parse(localStorage.getItem(k));Object.assign(save.data,{phase:"shop",remaining:0,enemies:[],bullets:[],projectiles:[],cash:500});localStorage.setItem(k,JSON.stringify(save));}',KEY)
+ # Seed an intermission in this disposable browser context, before app startup,
+ # after the previous document finishes its pagehide save. The one-shot flag
+ # leaves later prep reloads untouched.
+ page.add_init_script("""(()=>{
+  const fixture='deadblock-test.intermission-seeded';
+  if(sessionStorage.getItem(fixture))return;
+  const k='deadblock.survival.run.v1',save=JSON.parse(localStorage.getItem(k));
+  Object.assign(save.data,{phase:'shop',countdown:0,remaining:0,enemies:[],bullets:[],projectiles:[],cash:500});
+  localStorage.setItem(k,JSON.stringify(save));sessionStorage.setItem(fixture,'1');
+ })()""")
  page.reload();page.locator('#continueButton').click()
+ expect(page.locator('#panelTitle')).to_have_text('The armory.')
  page.locator('[data-action="tab"][data-id="defenses"]').click();page.locator('[data-action="buy"][data-id="wall"]').click()
  page.locator('[data-action="prepare"]').click();expect(page.locator('#prepBar')).to_be_visible()
  page.locator('#pauseButton').click();prep=page.evaluate('(k)=>JSON.parse(localStorage.getItem(k)).data',KEY);assert prep['phase']=='prep' and prep['wave']==1
