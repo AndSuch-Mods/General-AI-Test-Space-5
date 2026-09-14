@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Apply reviewed renderer integration
+      - name: Apply reviewed renderer integration and visual corrections
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -28,6 +28,8 @@ jobs:
           if p.exists():
               p.write_text(p.read_text().replace('geMMmgKXK','geMmgKXK').replace('LsevJesMtNm','LsevJesNtNm'))
               subprocess.run(['python',str(p)],check=True)
+          p=Path('scripts/refine_3d_art.py')
+          if p.exists():subprocess.run(['python',str(p)],check=True)
           PY
           mkdir -p test-results
           git diff 30994df7b8619d77960790af276aad53dd7229cc --stat | tee test-results/changes.txt
@@ -50,6 +52,15 @@ jobs:
         run: |
           set -o pipefail
           xvfb-run -a python tests/webgl.py 2>&1 | tee test-results/webgl-output.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deadblock-3d-visual-review
+          path: |
+            test-results/*3d*.png
+            test-results/webgl-results.json
+            test-results/webgl-output.txt
+          if-no-files-found: ignore
       - name: Mobile controls, preparation, rotation, saves and offline play
         id: browser
         continue-on-error: true
@@ -64,9 +75,11 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add src tests index.html styles.css models.html sw.js package.json release.json README.md update.html .github/workflows/verify.yml
-          if [ -f scripts/apply_3d_integration.py ]; then git rm -f scripts/apply_3d_integration.py; fi
+          for f in scripts/apply_3d_integration.py scripts/refine_3d_art.py; do
+            if [ -f "$f" ]; then git rm -f "$f"; fi
+          done
           if ! git diff --cached --quiet; then
-            git commit -m 'Integrate and verify real 3D models, oblique WebGL camera and save-safe 1.4.0 release'
+            git commit -m 'Integrate and verify detailed WebGL models, angled camera and save-safe 1.4.0 release'
             git push origin HEAD:deadblock-3d-1-4
           fi
           git rev-parse HEAD | tee test-results/tested-commit.txt
