@@ -1,0 +1,82 @@
+name: Prepare and verify art release
+on:
+  push:
+    branches: [deadblock-art-1-3]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: deadblock-art-release
+  cancel-in-progress: true
+jobs:
+  artwork:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Assemble approved icon and apply renderer-only update
+        run: |
+          python -m pip install Pillow==11.3.0
+          python scripts/release_art.py
+          mkdir -p test-results
+          git diff --stat | tee test-results/art-changes.txt
+          test -z "$(git diff --name-only -- src/engine.js src/app.js src/storage.js src/model.js src/defenses.js styles.css)"
+      - name: Syntax, combat, save and model regression tests
+        run: |
+          set -o pipefail
+          find src -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check sw.js
+          npm test 2>&1 | tee test-results/simulation-output.txt
+      - name: Install browser engines
+        run: |
+          python -m pip install playwright==1.62.0
+          python -m playwright install --with-deps chromium webkit
+      - name: Test models, mobile controls, preparation, saves and offline play
+        run: |
+          set -o pipefail
+          xvfb-run -a python tests/browser.py 2>&1 | tee test-results/browser-output.txt
+      - name: Commit tested generated files to the art branch
+        if: github.ref == 'refs/heads/deadblock-art-1-3'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets icon.png index.html manifest.webmanifest package.json release.json src/renderer.js src/data.js sw.js tests/browser.py tests/live.py README.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Install approved character models and iPhone icon for 1.3.0'
+            git push origin HEAD:deadblock-art-1-3
+          fi
+          git rev-parse HEAD | tee test-results/tested-commit.txt
+          git diff 5111606be9c6afa025263956241d29f7effeec21 --stat | tee test-results/release-diff.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deadblock-art-checks
+          path: test-results
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deadblock-art-source
+          include-hidden-files: true
+          path: |
+            src
+            assets
+            scripts
+            tests
+            index.html
+            styles.css
+            icon.png
+            icon.svg
+            manifest.webmanifest
+            sw.js
+            release.json
+            package.json
+            README.md
+            update.html
+            .nojekyll
