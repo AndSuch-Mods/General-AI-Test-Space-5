@@ -23,6 +23,12 @@ with Image.open(SOURCE) as image:
 for part in parts:
     if part.exists():part.unlink()
 
+# Keep enemy directions resident at a bounded, mobile-sized resolution.
+p=ROOT/'src/characters.js';s=p.read_text()
+s=s.replace('const CAPACITY=256;', 'const CAPACITY=768;').replace('DENSITY=2;', 'DENSITY=1.5;')
+if 'frame=frame===2?0:frame;' not in s:
+    s=s.replace('  const key=[kind,weapon,direction,frame,stains?1:0]', '  frame=frame===2?0:frame;\n  const key=[kind,weapon,direction,frame,stains?1:0]')
+p.write_text(s)
 p=ROOT/'src/renderer.js';s=p.read_text()
 s=s.replace("import {headFeatures} from './model.js';","import {drawCharacter} from './characters.js';")
 a=s.index('    actor(e, player = false)');b=s.index('    wall(w, map)',a)
@@ -47,14 +53,14 @@ if "'./assets/icon-180-v1.3.png'" not in s:s=s.replace("'./icon.png'","'./icon.p
 p.write_text(s)
 p=ROOT/'release.json';d=json.loads(p.read_text());d.update(version='1.3.0',characterArt='voxel-concrete',modelTypes=7,icon='approved-second');p.write_text(json.dumps(d,separators=(',',':'))+'\n')
 p=ROOT/'package.json';p.write_text(p.read_text().replace('1.2.0','1.3.0'))
+p=ROOT/'update.html';p.write_text(p.read_text().replace('1.2.0','1.3.0'))
 # Existing tests are release-specific; keep their assertions on the shipped version.
 for name in ['tests/browser.py','tests/live.py']:
     p=ROOT/name;p.write_text(p.read_text().replace('1.2.0','1.3.0'))
-p=ROOT/'tests/live.py';s=p.read_text()
+p=ROOT/'tests/live.py';s=p.read_text().replace('15 live assets match repository','live code and icon assets match repository')
 s=s.replace("FILES=['index.html'","FILES=['src/characters.js','assets/icon-180-v1.3.png','assets/icon-192-v1.3.png','assets/icon-512-v1.3.png','index.html'")
-s=s.replace("'15 live assets match repository'","'live code and icon assets match repository'")
 p.write_text(s)
-p=ROOT/'README.md';s=p.read_text()
+p=ROOT/'README.md';s=p.read_text().replace('bounded 256-entry cache','bounded 768-entry cache')
 if '## 1.3.0 art update' not in s:
     s+="""
 
@@ -62,7 +68,7 @@ if '## 1.3.0 art update' not in s:
 
 The player and all six enemy types now use original voxel models based on the approved character sheet. The survivor wears olive gear with light blood marks. The bomber has a visible explosive vest; the heavy demon has a wider silhouette, armor and chains. Enemy abilities, stats, colliders, save schema, maps, preparation, manual fire and landscape handling are unchanged.
 
-Faces and equipment are projected in model space with back-face culling. Eyes are drawn on the head's front surface, not over the back of the skull. Overlapping horn segments attach directly to the head. Character sprites are cached at 32 directions and four gait poses, with a bounded 256-entry cache. The blood setting also controls character stains.
+Faces and equipment are projected in model space with back-face culling. Eyes are drawn on the head's front surface, not over the back of the skull. Overlapping horn segments attach directly to the head. Character sprites are cached at 32 directions and four gait poses, with a bounded 768-entry cache. The blood setting also controls character stains.
 
 The second approved survivor/demon image supplies the iPhone Home Screen icon. Versioned 180, 192 and 512 pixel PNGs are generated from `assets/icon-approved.webp`. Run `python scripts/release_art.py` with Pillow to regenerate them. The source SHA-256 is checked before processing. The game does not load remote art or fonts.
 
