@@ -21,7 +21,9 @@ jobs:
           mkdir -p test-results
           git archive --format=tar HEAD > test-results/source-transfer.tar
       - name: Apply checksummed release
-        run: python3 maintenance/apply-release.py
+        run: |
+          python3 maintenance/apply-release.py
+          python3 maintenance/finish-release.py
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
