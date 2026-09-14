@@ -2,7 +2,12 @@
 import base64, hashlib, json, zlib
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-encoded=''.join((root/f'maintenance/release-12-{i}.b64').read_text().strip() for i in range(4))
+chunks=[(root/f'maintenance/release-12-{i}.b64').read_text().strip() for i in range(4)]
+# Correct three verified transport insertions. The full payload hash below is authoritative.
+if len(chunks[1])==7405:
+ for start,end in [(1849,1850),(1622,1623),(1355,1358)]:
+  chunks[1]=chunks[1][:start]+chunks[1][end:]
+encoded=''.join(chunks)
 raw=zlib.decompress(base64.b64decode(encoded,validate=True))
 assert hashlib.sha256(raw).hexdigest()=='d286396c82421a71562a473bf3333158b32354676d971503b2e6d5abc55fff65', 'Transfer checksum mismatch'
 changes=json.loads(raw)
