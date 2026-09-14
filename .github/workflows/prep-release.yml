@@ -24,6 +24,7 @@ jobs:
         run: |
           python3 maintenance/apply-release.py
           python3 maintenance/finish-release.py
+          python3 maintenance/viewport-final.py
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
