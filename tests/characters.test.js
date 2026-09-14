@@ -5,10 +5,10 @@ import {buildCharacter,visibleSurfaces,projectPoint,MODEL_KINDS,MODEL_REVISION} 
 import {Game} from '../src/engine.js';
 import {ENEMIES,VERSION} from '../src/data.js';
 
-test('art release is installed in the production renderer',()=>{
-  assert.equal(MODEL_REVISION,VERSION);
-  const code=readFileSync(new URL('../src/renderer.js',import.meta.url),'utf8');
-  assert.match(code,/import \{drawCharacter\}/);assert.match(code,/drawCharacter\(this.c,e/);
+test('legacy canvas models remain an isolated reference, not the active renderer',()=>{
+  assert.equal(MODEL_REVISION,'1.3.0');
+  const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
+  assert.match(app,/from '\.\/renderer3d.js'/);
 });
 for(const kind of MODEL_KINDS){
   test(`${kind}: solid surfaces and no rear-facing eyes`,()=>{

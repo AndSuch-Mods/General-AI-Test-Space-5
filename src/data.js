@@ -1,5 +1,5 @@
 // Original game data. No assets or source from the Boxhead games are used.
-export const VERSION = '1.3.0';
+export const VERSION = '1.4.0';
 export const WORLD = { w: 2160, h: 1520, cell: 40 };
 export const MAP_SCALE = {x:1.5,y:1.52};
 export const MAPS = [

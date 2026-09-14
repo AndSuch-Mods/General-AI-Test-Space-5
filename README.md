@@ -1,70 +1,34 @@
-# Deadblock 1.2.0
+# Deadblock 1.4.0: real 3D
 
-An original single-player, Boxhead-inspired survival game for iPhone and desktop. The game is hosted at https://andsuch-mods.github.io/General-AI-Test-Space-5/ .
+The game now runs on a WebGL 2 renderer using Three.js r180. Character artwork is real, lit 3D geometry, not pre-rendered sprites or a new concept sheet. The fixed orthographic camera looks down at 52 degrees so the front, side, and top surfaces remain visible without perspective size changes.
 
-## This update
+Play: https://andsuch-mods.github.io/General-AI-Test-Space-5/
+Live model viewer: https://andsuch-mods.github.io/General-AI-Test-Space-5/models.html
 
-- Landscape-only play. The manifest requests landscape and the game attempts the browser orientation lock. Where the browser rejects it, a rotate prompt blocks play and saves/pauses the run. Returning to landscape keeps the run paused until Resume is pressed, and viewport sizing follows Safari's visible area.
-- Faces use head-local geometry, with rear-facing eyes culled and horns attached to the head's rotated top surface.
-- New games begin in preparation. Between rounds: Armory, Exit shop, Preparation, Start wave. Prep has no time limit or enemy spawns. Walk, aim, dash, and place defenses; gunfire/grenades are disabled until combat starts. The single save includes the preparation phase.
-- A dedicated DEFENSES shop tab contains structure walls (400 HP each), barrels, mines and turrets. Walls and barrels snap to a 40-unit grid to create connected lines. Up to 64 defenses are supported. Zombies route around them where possible and break through if blocked.
-- Dead runway adds a long airstrip with every enemy type entering from the west end only. The west spawn segment avoids the side walls.
-- The standard camera shows approximately 10% more width and height than 1.1, without adding a zoom setting.
+## Models and rendering
 
-### Retained from 1.1
+`src/models3d.js` defines the survivor and six enemy classes. The models have 120–195 primary modeled pieces plus smaller surface-relief patches before batching, with chamfered surfaces, equipment, layered clothing, recessed facial features, attached horns, teeth, explosives, armor and open chain links. Fixed details are merged into animated body sections and instanced across the horde. The model viewer uses the same geometry and materials as gameplay. The approved sheet is a visual reference, not an automatically converted GLB asset or a promise of an exact match to generated art.
 
-- Manual player aiming and firing only. The auto-fire switch and targeting behavior are removed. Sentry turrets still aim independently.
-- A compact, translucent bottom row: dash, frag, selected defense, current gun, and More. The row does not grow as weapons are purchased.
-- More pauses the game and opens the weapon/deployable selector. Closing it resumes the fight.
-- Seven arenas, including Dead runway, The gauntlet and Red rite, with actual north/south/east/west spawn restrictions shown in each preview.
-- Arenas are now 2160 by 1520 world units, up from 1440 by 1000. The camera also shows a wider area. Character size, weapon ranges, enemy abilities and movement speed are unchanged.
-- Block characters, horned red devils and bosses, and distinct weapon illustrations.
-- Health, ammunition, grenades, barrels, mines, barricades and rare turret pickups.
+`src/renderer3d.js` renders the arena, defenses, characters, projectiles and effects. `src/camera3d.js` handles the orthographic projection and mapping touch/mouse directions to the simulation plane. The existing Canvas renderer remains in source for its map preview and weapon illustrations, but it no longer renders gameplay characters. The legacy character module remains as historical source with separate tests.
 
-This is not the original Flash game. It does not include the original assets, co-op or deathmatch. More elaborate interactive scenery remains future work.
+Rendering resolution is capped at 2.2 million pixels, with a lower quality mode and one directional shadow map. Models use no runtime image textures. Meshes are depth-tested and opaque; face details do not render through the head. Effects and health labels use an overlay, not character sprites. WebGL context loss pauses the run and saves it, and recovery leaves the game paused until Resume.
 
-## iPhone
+## Gameplay and saves
 
-Play in landscape. Native orientation locking depends on the browser; the rotate-and-pause guard is always used when a touch device switches to portrait. No installation can promise to override an operating-system rotation restriction.
+This release preserves the existing simulation, enemy statistics, collision footprints, seven maps including the one-ended runway, manual firing, inter-wave preparation, destructible structure walls, barrel chains, pickups and single-run autosave. It does not add new gameplay features or reset saved runs. Death and a confirmed new game still clear/replace the active run. Settings and best scores remain separate. Saves are local to the browser or installed Home Screen app and do not sync through GitHub.
 
-Open the game in Safari and use Share, then Add to Home Screen. Launch from that icon for your main run. Use the left stick to move and drag the right stick to aim and shoot. Release it to stop firing. The buttons throw a frag, dash, or deploy the selected defense. More opens the rest of your equipment. During prep, the right stick only aims, and the selected defense button places the previewed item. Open Shop to buy more, then Exit shop to keep preparing. Start wave begins the countdown.
+The existing landscape gate and WebKit viewport handling remain. The standard camera shows approximately the same horizontal world span as 1.3, with the angled projection providing a deeper ground view. No camera rotation occurs during play.
 
-Use the same Safari or installed-app context to continue a run. Their storage may be separate. This game has no cloud save.
+## iPhone and offline installation
 
-## Updating an existing installation
+Open the play page in Safari, then Share, Add to Home Screen, and Open as Web App when offered. Install before starting the main run because Safari and the installed app may use separate storage. Load online until OFFLINE READY appears. The whole 3D engine is hosted and cached with the game, with no CDN dependency at play time. An existing installation can use `update.html` to update without clearing localStorage. Do not clear website data to force a refresh.
 
-Open the game while online. It downloads the complete new cache without refreshing an active run. Pause, then close and reopen or reload once to use the new version. The lobby should show 1.2.0, and AUTO FIRE should be gone. The update page at `update.html` also checks installation once the old worker has refreshed.
+WebGL 2 is required. An initialization failure displays a recovery message without modifying the save. Automated desktop WebKit tests are not a substitute for testing frame rate, battery use, and touch feel on a physical iPhone.
 
-Do not clear website data to update: that removes the save. Existing 1.1 runs keep their geometry and progress. Existing 1.0 runs migrate their positions into the larger arena while retaining the run ID, wave, health, purchases, ammunition and credits.
+## Verification
 
-## One save slot
+Run `npm test` for simulation, storage, geometry, camera, and model tests. The vendored engine does not require `npm install` to play or test. Run a static HTTP server from the repository root for development. Browser tests use Python Playwright and Chromium/WebKit; CI installs the pinned test version and captures gameplay/model screenshots. `tests/webgl.py` exercises all model directions, a dense horde, draw counts, graphics-context recovery, blood visibility, and weapon-resource disposal. `tests/browser.py` retains the gameplay, rotation, preparation, and offline-save checks. `tests/live.py` compares deployed bytes with the tested repository and opens the real Pages game.
 
-The run autosaves every second, on pause and when switching apps. A new game asks before replacing it. Death clears the run, but settings and personal best records remain. Browser storage cleanup can still remove local saves. The app pauses in the background, so enemies do not advance while it is hidden.
+## Third-party license
 
-## Desktop controls
-
-WASD or arrows move. Mouse aims; click or Space fires. Q/E or 1–8 selects a gun. Shift dashes. G throws a grenade. B deploys the selected defense. M opens More. P or Escape pauses.
-
-## Development
-
-No runtime dependencies. Serve the repository over HTTP, not a file URL:
-
-```sh
-python3 -m http.server 8000
-npm test
-```
-
-Local test hooks require `?test=1` on localhost or 127.0.0.1 and are never exposed on GitHub Pages. Browser tests exercise mobile layouts, movement, firing, loadout selection, purchases, save restoration, death, an old service-worker upgrade and offline navigation under the Pages subpath. `tests/live.py` checks that published assets match the repository and that the public game starts and resumes in a mobile-sized WebKit browser. A physical iPhone still needs playtesting for comfort and performance.
-
-Run `npm test` for simulation and geometry tests. `tests/browser.py` checks touch controls, preparation, orientation recovery, save restoration and cache updates in Chromium and WebKit. `tests/live.py` verifies the deployed assets byte-for-byte and exercises the production Pages site in mobile WebKit. Production does not expose test hooks.
-
-
-## 1.3.0 art update
-
-The player and all six enemy types now use original voxel models based on the approved character sheet. The survivor wears olive gear with light blood marks. The bomber has a visible explosive vest; the heavy demon has a wider silhouette, armor and chains. Enemy abilities, stats, colliders, save schema, maps, preparation, manual fire and landscape handling are unchanged.
-
-Faces and equipment are projected in model space with back-face culling. Eyes are drawn on the head's front surface, not over the back of the skull. Overlapping horn segments attach directly to the head. Character sprites are cached at 32 directions and four gait poses, with a bounded 768-entry cache. The blood setting also controls character stains.
-
-The second approved survivor/demon image supplies the iPhone Home Screen icon. Versioned 180, 192 and 512 pixel PNGs are generated from `assets/icon-approved.webp`. Run `python scripts/release_art.py` with Pillow to regenerate them. The source SHA-256 is checked before processing. The game does not load remote art or fonts.
-
-Existing saves remain in the same storage slot. Loading 1.3.0 does not start a new run. Home Screen launchers can retain an old icon independently of the game's cache; do not clear website data to update the artwork.
+Three.js 0.180.0 is included in `vendor/`, pinned to r180, with its MIT license in `vendor/THREE-LICENSE.txt`. It is loaded locally rather than from a CDN. Original project code and art are not taken from Boxhead. Sean Cooper's Boxhead series inspired the gameplay; this remains an unofficial, single-player homage.

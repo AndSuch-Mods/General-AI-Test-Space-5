@@ -1,0 +1,151 @@
+{
+  "version": "1.4.0",
+  "sourceRun": 34899512714,
+  "sourceArtifact": 10370556451,
+  "reviewedSourceSha256": "7ab44b58d7156cd11b950e27c7a21e2098cc9dc5c54243a8cea8c4a9da9c4ae5",
+  "unitTests": {
+    "passed": 102,
+    "failed": 0
+  },
+  "webgl": [
+    {
+      "browser": "chromium",
+      "passed": true,
+      "horde": {
+        "renderer": "WebGL2",
+        "revision": "1.4.0",
+        "drawCalls": 105,
+        "triangles": 857851,
+        "geometries": 109,
+        "textures": 2,
+        "visibleCharacters": 112,
+        "buffer": [
+          1400,
+          900
+        ]
+      },
+      "memoryAfterWeaponSwaps": {
+        "renderer": "WebGL2",
+        "revision": "1.4.0",
+        "drawCalls": 19,
+        "triangles": 10671,
+        "geometries": 108,
+        "textures": 2,
+        "visibleCharacters": 1,
+        "buffer": [
+          1400,
+          900
+        ]
+      },
+      "checks": [
+        "seven actual models front rear and oblique",
+        "finite animated matrices",
+        "single WebGL2 context",
+        "120-enemy render",
+        "batched draw call budget",
+        "camera aim round trip",
+        "context loss pauses and preserves save",
+        "context restoration remains paused",
+        "weapon changes dispose old geometry",
+        "blood toggle hides only stains",
+        "no uncaught page errors"
+      ]
+    },
+    {
+      "browser": "webkit",
+      "passed": true,
+      "horde": {
+        "renderer": "WebGL2",
+        "revision": "1.4.0",
+        "drawCalls": 105,
+        "triangles": 856843,
+        "geometries": 109,
+        "textures": 2,
+        "visibleCharacters": 112,
+        "buffer": [
+          1400,
+          900
+        ]
+      },
+      "memoryAfterWeaponSwaps": {
+        "renderer": "WebGL2",
+        "revision": "1.4.0",
+        "drawCalls": 20,
+        "triangles": 12237,
+        "geometries": 108,
+        "textures": 2,
+        "visibleCharacters": 1,
+        "buffer": [
+          1400,
+          900
+        ]
+      },
+      "checks": [
+        "seven actual models front rear and oblique",
+        "finite animated matrices",
+        "single WebGL2 context",
+        "120-enemy render",
+        "batched draw call budget",
+        "camera aim round trip",
+        "context loss pauses and preserves save",
+        "context restoration remains paused",
+        "weapon changes dispose old geometry",
+        "blood toggle hides only stains",
+        "no uncaught page errors"
+      ]
+    }
+  ],
+  "browser": [
+    {
+      "browser": "chromium",
+      "layout": "desktop",
+      "passed": true
+    },
+    {
+      "browser": "chromium",
+      "layout": "portrait",
+      "passed": true
+    },
+    {
+      "browser": "chromium",
+      "layout": "landscape",
+      "passed": true
+    },
+    {
+      "browser": "chromium",
+      "layout": "small-landscape",
+      "passed": true
+    },
+    {
+      "browser": "chromium",
+      "layout": "cache-update-and-offline-save",
+      "passed": true
+    },
+    {
+      "browser": "webkit",
+      "layout": "desktop",
+      "passed": true
+    },
+    {
+      "browser": "webkit",
+      "layout": "portrait",
+      "passed": true
+    },
+    {
+      "browser": "webkit",
+      "layout": "landscape",
+      "passed": true
+    },
+    {
+      "browser": "webkit",
+      "layout": "small-landscape",
+      "passed": true
+    },
+    {
+      "browser": "webkit",
+      "layout": "cache-update-and-offline-save",
+      "passed": true
+    }
+  ],
+  "note": "All tests passed. Original workflow failed only when its token attempted to commit a workflow file. This import commits the exact tested source; workflow files are updated separately through the authorized connector."
+}

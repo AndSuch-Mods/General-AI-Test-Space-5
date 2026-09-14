@@ -19,7 +19,7 @@ class ModelBatch {
   const b=this.blueprint,count=Math.min(this.max,entities.length);
   for(const part of this.parts){const mesh=part.mesh;mesh.count=part.material==='blood'&&!blood?0:count;}
   for(let i=0;i<count;i++){
-   const state=entities[i],walk=state.walk||0,gait=state._moving?Math.sin(walk):0,bob=state._moving?Math.abs(Math.sin(walk))*.6:Math.sin(time*1.6+(state.id||0))*.15;
+   const state=entities[i],walk=state.walk||0,gait=state._moving?Math.sin(walk):0,bob=state._moving?Math.abs(Math.sin(walk))*.6:Math.sin(time*1.6+(Number.isFinite(state.id)?state.id:0))*.15;
    _e.set(b.lean||0,Math.PI/2-(state.angle||0),0,'YXZ');_q.setFromEuler(_e);const scale=b.scale*(state._scale||1);
    _root.compose(_v.set(state.x,bob*scale,state.y),_q,_s.setScalar(scale));
    for(const part of this.parts){
@@ -65,13 +65,13 @@ export class Renderer {
  constructor(canvas,settings,options={}){
   this.canvas=canvas;this.settings=settings;this.options=options;this.time=0;this.cx=WORLD.w/2;this.cy=WORLD.h/2;this.scale=1;this.w=1;this.h=1;this.parts=[];this.beams=[];this.blasts=[];this.texts=[];this.shake=0;this.flash=0;this.mapId='';this.placement=null;this.lost=false;this.recoil=0;this.lastPositions=new Map();this.batches=new Map();this.defenseBatches=new Map();this.cachedWeapon=null;this.lastQuality='';
   this.gl=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance',stencil:false});
-  this.gl.outputColorSpace=THREE.SRGBColorSpace;this.gl.toneMapping=THREE.ACESFilmicToneMapping;this.gl.toneMappingExposure=1.35;
+  this.gl.outputColorSpace=THREE.SRGBColorSpace;this.gl.toneMapping=THREE.ACESFilmicToneMapping;this.gl.toneMappingExposure=1.08;
   this.gl.shadowMap.enabled=true;this.gl.shadowMap.type=THREE.PCFSoftShadowMap;
   canvas.dataset.renderer='webgl2';canvas.dataset.modelRevision='1.4.0';
   this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#222c29');this.camera=makeCamera();
   this.materials={matte:new THREE.MeshStandardMaterial({vertexColors:true,roughness:.84,metalness:.02}),metal:new THREE.MeshStandardMaterial({vertexColors:true,roughness:.44,metalness:.48}),blood:new THREE.MeshStandardMaterial({vertexColors:true,roughness:.95}),glow:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false})};
-  this.scene.add(new THREE.HemisphereLight('#dcebf1','#3b392f',2.05));
-  this.sun=new THREE.DirectionalLight('#ffdfb0',3.2);this.sun.castShadow=true;this.sun.shadow.mapSize.set(1024,1024);this.sun.shadow.camera.near=10;this.sun.shadow.camera.far=3000;this.sun.shadow.bias=-.00022;this.sun.shadow.normalBias=.5;
+  this.scene.add(new THREE.HemisphereLight('#dcebf1','#3b392f',1.65));
+  this.sun=new THREE.DirectionalLight('#ffdfb0',2.8);this.sun.castShadow=true;this.sun.shadow.mapSize.set(1024,1024);this.sun.shadow.camera.near=10;this.sun.shadow.camera.far=3000;this.sun.shadow.bias=-.00022;this.sun.shadow.normalBias=.5;
   this.scene.add(this.sun,this.sun.target);const fill=new THREE.DirectionalLight('#b5dbe5',.75);fill.position.set(500,500,-1000);this.scene.add(fill);
   this.arena=new THREE.Group();this.scene.add(this.arena);this.arenaResources=[];
   this.ray=new THREE.Raycaster();this.plane=new THREE.Plane(new THREE.Vector3(0,1,0),-SHOT_HEIGHT);this.ndc=new THREE.Vector2();
@@ -216,7 +216,7 @@ export class Renderer {
  focusModel(kind,angle=.8){
   const state={id:'model-view',phase:'prep',weapon:this.options.weapon||'carbine',player:{id:'player',x:0,y:0,angle,walk:this.time*6,hp:100,maxHp:100},enemies:[],defenses:[],pickups:[],bullets:[],projectiles:[],marks:[],inventory:{barrel:0},build:'barrel',countdown:0};
   if(kind!=='player'){state.player.x=1e5;state.enemies.push({id:1,kind,x:0,y:0,angle,walk:this.time*6,hp:100,maxHp:100,fuse:-1});}
-  this.options.fixedCamera=true;this.options.hidePlayerRing=true;this.options.animateAll=true;this.cx=0;this.cy=kind==='boss'?-76:kind==='brute'?-60:-46;this.scale=sizeCamera(this.camera,this.w,this.h,(this.w/this.h)*245);return state;
+  this.options.fixedCamera=true;this.options.hidePlayerRing=true;this.options.animateAll=true;this.cx=0;this.cy=kind==='boss'?-76:kind==='brute'?-60:-46;this.scale=sizeCamera(this.camera,this.w,this.h,(this.w/this.h)*(kind==='boss'?245:kind==='brute'?185:160));return state;
  }
  dispose(){for(const b of this.batches.values())b.dispose(this.scene);for(const b of this.defenseBatches.values())b.dispose(this.scene);for(const m of Object.values(this.materials))m.dispose();for(const r of this.arenaResources)r.dispose();for(const mesh of [this.ring,this.preview,this.dropMesh,this.particleMesh,this.projectileMesh,this.lines,this.markMesh,this.burnMesh]){mesh.geometry.dispose();mesh.material.dispose();mesh.dispose?.();}this.gl.dispose();this.overlay.remove();}
 }

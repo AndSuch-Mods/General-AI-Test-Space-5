@@ -75,3 +75,7 @@
 
 /* Prep notices stay clear of Shop and Start wave. */
 body:has(#prepBar:not([hidden])) #toast{top:calc(113px + var(--safe-top))}
+
+/* The HUD remains DOM-based; only the world and models use WebGL. */
+.world-overlay {position:fixed;inset:0;pointer-events:none;display:block;}
+.model-view-link {color:#d3e48d;text-decoration:none;font-size:12px;padding:12px 0;}

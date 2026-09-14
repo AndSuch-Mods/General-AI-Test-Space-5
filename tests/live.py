@@ -6,16 +6,16 @@ from playwright.sync_api import sync_playwright,expect
 ROOT=Path(__file__).resolve().parents[1];OUT=ROOT/'test-results';OUT.mkdir(exist_ok=True)
 BASE='https://andsuch-mods.github.io/General-AI-Test-Space-5/'
 KEY='deadblock.survival.run.v1'
-FILES=['src/characters.js','assets/icon-180-v1.3.png','assets/icon-192-v1.3.png','assets/icon-512-v1.3.png','index.html','styles.css','src/model.js','src/defenses.js','src/data.js','src/engine.js','src/app.js','src/storage.js','src/renderer.js','src/audio.js','manifest.webmanifest','sw.js','icon.png','update.html','release.json']
+FILES=['models.html','src/gallery3d.js','src/renderer3d.js','src/camera3d.js','src/models3d.js','vendor/three.module.min.js','vendor/three.core.min.js','src/characters.js','assets/icon-180-v1.3.png','assets/icon-192-v1.3.png','assets/icon-512-v1.3.png','index.html','styles.css','src/model.js','src/defenses.js','src/data.js','src/engine.js','src/app.js','src/storage.js','src/renderer.js','src/audio.js','manifest.webmanifest','sw.js','icon.png','update.html','release.json']
 def remote(path):
- req=Request(BASE+path+'?verify=1.3.0',headers={'User-Agent':'Deadblock-live-check','Cache-Control':'no-cache'})
+ req=Request(BASE+path+'?verify=1.4.0',headers={'User-Agent':'Deadblock-live-check','Cache-Control':'no-cache'})
  with urlopen(req,timeout=20) as response:return response.read()
 for attempt in range(40):
  try:
   if remote('release.json')==(ROOT/'release.json').read_bytes():break
  except Exception as error:print('Waiting for Pages:',str(error),flush=True)
  time.sleep(10)
-else:raise RuntimeError('Pages did not publish version 1.3.0 in time')
+else:raise RuntimeError('Pages did not publish version 1.4.0 in time')
 assets=[]
 for path in FILES:
  for attempt in range(12):
@@ -30,9 +30,10 @@ with sync_playwright() as pw:
  browser=pw.webkit.launch(headless=False)
  context=browser.new_context(viewport={'width':844,'height':390},is_mobile=True,has_touch=True)
  page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
- page.goto(BASE+'?v=1.3.0');page.bring_to_front();expect(page).to_have_title('Deadblock | Last stand')
+ page.goto(BASE+'?v=1.4.0');page.bring_to_front();expect(page).to_have_title('Deadblock | Last stand')
  assert page.evaluate('typeof window.__deadblock')=='undefined'
- page.wait_for_function("document.getElementById('offlineStatus').textContent.includes('1.3.0')")
+ assert page.locator('#gameCanvas').get_attribute('data-renderer')=='webgl2'
+ page.wait_for_function("document.getElementById('offlineStatus').textContent.includes('1.4.0')")
  page.locator('#newButton').click();assert page.locator('[data-map]').count()==7
  page.locator('[data-action="begin"]').click();expect(page.locator('#hud')).to_be_visible()
  expect(page.locator('#prepBar')).to_be_visible()
@@ -74,6 +75,6 @@ with sync_playwright() as pw:
  page.reload();page.locator('#continueButton').click();expect(page.locator('#prepBar')).to_be_visible()
  page.locator('#startWaveButton').click();expect(page.locator('#waveNumber')).to_have_text('02')
  assert not errors,errors
- report={'url':BASE,'version':'1.3.0','passed':True,'assets':assets,'browser':'WebKit','checks':['live code and icon assets match repository','landscape rotation guard','first-wave preparation','buy structure wall','intermission exits to prep','prep save resumes before next wave','new game starts','manual idle does not shoot','compact five-button HUD','More opens and closes','select mine','single saved run resumes','production has no test hooks','zero page errors']}
+ report={'url':BASE,'version':'1.4.0','passed':True,'assets':assets,'browser':'WebKit','checks':['live code and icon assets match repository','landscape rotation guard','first-wave preparation','buy structure wall','intermission exits to prep','prep save resumes before next wave','new game starts','manual idle does not shoot','compact five-button HUD','More opens and closes','select mine','single saved run resumes','production has no test hooks','zero page errors']}
  (OUT/'live-results.json').write_text(json.dumps(report,indent=2));print(json.dumps(report,indent=2),flush=True)
  context.close();browser.close()

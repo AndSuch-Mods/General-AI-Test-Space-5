@@ -17,4 +17,4 @@ canvas.onpointermove=e=>{if(drag===null)return;angle+=(e.clientX-drag)*.012;drag
 window.addEventListener('resize',()=>renderer.resize());
 label();
 function frame(now){const dt=document.hidden?0:Math.min(.04,(now-last)/1000);last=now;if(!document.hidden){if(rotating)angle+=dt*.28;const state=renderer.focusModel(kind,angle);renderer.draw(state,stage,dt,true);}requestAnimationFrame(frame);}requestAnimationFrame(frame);
-if(['localhost','127.0.0.1'].includes(location.hostname))window.__models3d={renderer,setKind(k){select.value=k;kind=k;angle=.92;label();},setAngle(a){angle=a;rotating=false;}};
+if(['localhost','127.0.0.1'].includes(location.hostname))window.__models3d={renderer,setKind(k){select.value=k;kind=k;angle=.92;label();},setAngle(a){angle=a;rotating=false;document.querySelector('#rotate').textContent='Rotate: off';document.querySelector('#rotate').classList.remove('active');}};

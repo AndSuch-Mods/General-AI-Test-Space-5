@@ -32,6 +32,7 @@ try:
  with sync_playwright() as pw:
   for engine in os.environ.get('BROWSERS','chromium,webkit').split(','):
    opts={'headless':engine!='webkit'}
+   if engine=='chromium':opts['args']=['--enable-unsafe-swiftshader']
    if engine=='chromium' and os.environ.get('CHROMIUM_PATH'):opts['executable_path']=os.environ['CHROMIUM_PATH']
    browser=getattr(pw,engine).launch(**opts)
    if engine=='webkit':probe(browser)
@@ -44,19 +45,10 @@ try:
       expect(page.locator('#orientationGate')).to_be_visible();assert page.evaluate('__deadblock.rotationBlocked')
       page.screenshot(path=str(OUT/f'{engine}-portrait-rotate.png'))
       w,h=844,390;page.set_viewport_size({'width':w,'height':h});expect(page.locator('#orientationGate')).to_be_hidden(timeout=10000)
-     if name=='desktop':
-      sheet=page.evaluate('''()=>{
-       const canvas=document.createElement('canvas');
-       const r=new __deadblock.renderer.constructor(canvas,{blood:false,shake:false,quality:'high'});
-       canvas.width=2240;canvas.height=2520;r.state={weapon:'pistol'};const c=r.c;c.scale(2,2);
-       c.fillStyle='#ced0bc';c.fillRect(0,0,1120,1260);c.font='13px monospace';
-       const kinds=['player','walker','runner','brute','bomber','cinder','boss'];
-       kinds.forEach((kind,row)=>{for(let col=0;col<8;col++){
-        const angle=-Math.PI/2+col*Math.PI/4,x=col*140+70,y=row*180+164;
-        c.fillStyle='#28362c';c.fillText(kind+' '+(col*45)+'deg',x-55,row*180+19);
-        r.actor({kind,x,y,angle,walk:0,fire:0,flash:0,telegraph:0,fuse:-1,hp:100,maxHp:100},kind==='player');
-       }});return canvas.toDataURL().split(',')[1];
-      }''');(OUT/f'{engine}-model-directions.png').write_bytes(base64.b64decode(sheet))
+     assert page.locator('#gameCanvas').get_attribute('data-renderer')=='webgl2'
+     assert page.evaluate('__deadblock.renderer.gl.capabilities.isWebGL2')
+     page.wait_for_function('window.__deadblock?.renderer.metrics?.triangles>1000')
+     assert page.evaluate('__deadblock.renderer.metrics.triangles')>1000
      page.locator('#newButton').click();assert page.locator('[data-map]').count()==7
      page.screenshot(path=str(OUT/f'{engine}-{name}-maps.png'))
      page.locator('[data-action="begin"]').click()
@@ -155,11 +147,11 @@ try:
     const deadline=Date.now()+45000;
     while(Date.now()<deadline){
      const keys=await caches.keys();
-     if(keys.includes('deadblock-survival-1.3.0')&&!keys.includes('deadblock-survival-1.0.0')&&reg.active?.state==='activated'&&navigator.serviceWorker.controller===reg.active)return true;
+     if(keys.includes('deadblock-survival-1.4.0')&&!keys.includes('deadblock-survival-1.0.0')&&reg.active?.state==='activated'&&navigator.serviceWorker.controller===reg.active)return true;
      await new Promise(resolve=>setTimeout(resolve,150));
     }
     throw Error('Updated cache exists but its worker did not take control');
-   }""");page.goto(BASE+'update.html');page.locator('#install').click();page.wait_for_url('**/?v=1.3.0',timeout=60000)
+   }""");page.goto(BASE+'update.html');page.locator('#install').click();page.wait_for_url('**/?v=1.4.0',timeout=60000)
    page.locator('#continueButton').click();page.locator('#pauseButton').click()
    after=page.evaluate('(k)=>JSON.parse(localStorage.getItem(k)).data',KEY);assert saved['id']==after['id']
    page.locator('[data-action="menu"]').click();network=False;page.reload(wait_until='load')
