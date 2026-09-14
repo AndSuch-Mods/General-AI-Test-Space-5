@@ -1,0 +1,62 @@
+name: Verify 3D overhaul
+on:
+  push:
+    branches: [deadblock-3d-1-4]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: deadblock-webgl
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Vendor the pinned Three.js release
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund three@0.180.0
+          mkdir -p vendor
+          cp node_modules/three/build/three.module.min.js vendor/
+          cp node_modules/three/build/three.core.min.js vendor/
+          cp node_modules/three/LICENSE vendor/THREE-LICENSE.txt
+          printf 'Three.js 0.180.0 (r180). Source: https://github.com/mrdoob/three.js/tree/r180\n' > vendor/VERSION.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add vendor
+          if ! git diff --cached --quiet; then
+            git commit -m 'Vendor Three.js r180 and MIT license for offline 3D rendering'
+            git push origin HEAD:deadblock-3d-1-4
+          fi
+          git rev-parse HEAD
+      - name: Simulation regression tests
+        run: npm test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deadblock-3d-source
+          include-hidden-files: true
+          path: |
+            vendor
+            src
+            assets
+            scripts
+            tests
+            index.html
+            styles.css
+            icon.png
+            icon.svg
+            manifest.webmanifest
+            sw.js
+            release.json
+            package.json
+            README.md
+            update.html
+            .github/workflows
+            .nojekyll
