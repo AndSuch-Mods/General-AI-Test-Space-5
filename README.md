@@ -57,3 +57,14 @@ npm test
 Local test hooks require `?test=1` on localhost or 127.0.0.1 and are never exposed on GitHub Pages. Browser tests exercise mobile layouts, movement, firing, loadout selection, purchases, save restoration, death, an old service-worker upgrade and offline navigation under the Pages subpath. `tests/live.py` checks that published assets match the repository and that the public game starts and resumes in a mobile-sized WebKit browser. A physical iPhone still needs playtesting for comfort and performance.
 
 Run `npm test` for simulation and geometry tests. `tests/browser.py` checks touch controls, preparation, orientation recovery, save restoration and cache updates in Chromium and WebKit. `tests/live.py` verifies the deployed assets byte-for-byte and exercises the production Pages site in mobile WebKit. Production does not expose test hooks.
+
+
+## 1.3.0 art update
+
+The player and all six enemy types now use original voxel models based on the approved character sheet. The survivor wears olive gear with light blood marks. The bomber has a visible explosive vest; the heavy demon has a wider silhouette, armor and chains. Enemy abilities, stats, colliders, save schema, maps, preparation, manual fire and landscape handling are unchanged.
+
+Faces and equipment are projected in model space with back-face culling. Eyes are drawn on the head's front surface, not over the back of the skull. Overlapping horn segments attach directly to the head. Character sprites are cached at 32 directions and four gait poses, with a bounded 768-entry cache. The blood setting also controls character stains.
+
+The second approved survivor/demon image supplies the iPhone Home Screen icon. Versioned 180, 192 and 512 pixel PNGs are generated from `assets/icon-approved.webp`. Run `python scripts/release_art.py` with Pillow to regenerate them. The source SHA-256 is checked before processing. The game does not load remote art or fonts.
+
+Existing saves remain in the same storage slot. Loading 1.3.0 does not start a new run. Home Screen launchers can retain an old icon independently of the game's cache; do not clear website data to update the artwork.

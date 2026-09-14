@@ -1,5 +1,5 @@
 import { WORLD, GUN, ENEMIES, clamp } from './data.js';
-import {headFeatures} from './model.js';
+import {drawCharacter} from './characters.js';
 const shades = new Map();
 function shade(hex, f) { const key = hex + f; if (shades.has(key))
     return shades.get(key); const n = parseInt(hex.slice(1), 16); const c = `rgb(${clamp((n >> 16) * f, 0, 255) | 0},${clamp(((n >> 8) & 255) * f, 0, 255) | 0},${clamp((n & 255) * f, 0, 255) | 0})`; shades.set(key, c); return c; }
@@ -78,49 +78,9 @@ export class Renderer {
     } if (e.type === 'dash')
         scatter(9, '#e5ecbd', 100, 0); if (this.parts.length > limit)
         this.parts.splice(0, this.parts.length - limit); }
-    actor(e, player = false) { const c = this.c, a = e.angle || 0, co = Math.cos(a), si = Math.sin(a); const spec = player ? { body: '#d6453e', head: '#f1d3aa' } : ENEMIES[e.kind]; const sc = player ? 1 : e.kind === 'boss' ? 1.85 : e.kind === 'brute' ? 1.38 : e.kind === 'runner' ? .88 : 1; c.save(); c.translate(e.x, e.y); c.scale(sc, sc); c.fillStyle = '#14201e50'; c.beginPath(); c.ellipse(6, 4, 21, 10, 0, 0, Math.PI * 2); c.fill(); if (player) {
-        c.strokeStyle = '#d8ef69';
-        c.lineWidth = 2;
-        c.beginPath();
-        c.ellipse(0, 1, 23, 13, 0, 0, Math.PI * 2);
-        c.stroke();
-    } const walk = Math.sin(e.walk || 0) * 3; const body = e.flash > 0 ? '#f0f4e7' : spec.body; for (const side of [-1, 1])
-        cube(c, -si * side * 6 + co * walk * side, co * side * 6 + si * walk * side, 0, 8, 13, 8, player ? '#1d2422' : '#2e3b35', a - Math.PI / 2); cube(c, 0, 0, 7, 16, 12, 12, player ? '#111519' : '#37423e', a - Math.PI / 2); cube(c, 0, 0, 19, 22, 14, player ? 26 : 18, body, a - Math.PI / 2); for (const side of [-1, 1])
-        cube(c, -si * side * 13 + co * (player ? 7 : 9), co * side * 13 + si * (player ? 7 : 9), player ? 24 : 27, 7, 13, 7, body, a - Math.PI / 2); if (player) {
-        const w = GUN[this.state.weapon], len = w.id === 'pistol' ? 21 : w.id === 'launcher' ? 36 : 30;
-        cube(c, co * 19, si * 19, 27, len, w.id === 'launcher' ? 12 : 7, w.id === 'minigun' ? 9 : 7, '#232b29', a);
-        cube(c, co * (19 + len / 2), si * (19 + len / 2), 29, 5, 6, 4, w.color, a);
+    actor(e, player = false) {
+        drawCharacter(this.c,e,{player,weapon:this.state.weapon,blood:this.settings.blood!==false,time:this.time});
     }
-    const head=headFeatures(a,player);
-    cube(c,co*5,si*5,head.z,head.width,head.depth,head.height,e.flash>0?'#ffffff':spec.head,a-Math.PI/2);
-    if(player)cube(c,co*5,si*5,head.z+head.height,20,18,5,'#21171a',a-Math.PI/2);
-    if(head.frontVisible) {
-        c.save();c.beginPath();head.face.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.clip();
-        for(const eye of head.eyes)poly(c,eye,player?'#272322':spec.eye||'#704331');
-        poly(c,head.mouth,'#382b27');c.restore();
-    }
-    if(!player&&(e.kind==='cinder'||e.kind==='boss'))for(const horn of head.horns) {
-        const b=horn.base,t=horn.tip;
-        poly(c,[b[0],b[1],t],'#211116','#130e11');
-        poly(c,[b[1],b[2],t],'#372129','#130e11');
-        poly(c,[b[2],b[3],t],'#171016','#130e11');
-    }
-    if(!player&&e.kind==='bomber') {
-        cube(c,co*5,si*5,20,15,10,9,'#b7a86c',a-Math.PI/2);
-        } if (!player && e.fire > 0)
-        for (let i = 0; i < 3; i++)
-            poly(c, [[-16 + i * 13, -20], [-8 + i * 13, -57 - Math.sin(this.time * 16 + i) * 6], [i * 13, -19]], i % 2 ? '#f9d27c90' : '#ea713695'); if (e.telegraph > 0 || e.fuse >= 0) {
-        c.strokeStyle = '#f2a766';
-        c.lineWidth = 2;
-        c.beginPath();
-        c.arc(0, 0, e.fuse >= 0 ? 35 : 27 + Math.sin(this.time * 18) * 3, 0, Math.PI * 2);
-        c.stroke();
-    } if (!player && (e.hp < e.maxHp || e.kind === 'boss')) {
-        c.fillStyle = '#202923';
-        c.fillRect(-17, e.kind==='boss'||e.kind==='cinder'?-85:-68, 34, 4);
-        c.fillStyle = e.kind === 'boss' ? '#e9a171' : '#cfdbb0';
-        c.fillRect(-17, e.kind==='boss'||e.kind==='cinder'?-85:-68, 34 * clamp(e.hp / e.maxHp, 0, 1), 4);
-    } c.restore(); }
     wall(w, map) { const c = this.c, [x, y, width, depth] = w, h = 37; c.fillStyle = '#18232133'; c.fillRect(x + 12, y + 8, width + 7, depth + 6); poly(c, [[x, y + depth - h], [x + width, y + depth - h], [x + width, y + depth], [x, y + depth]], '#3f4a45', '#2e3833'); poly(c, [[x + width, y - h], [x + width + 7, y - h + 7], [x + width + 7, y + depth - 3], [x + width, y + depth]], '#35413b', '#2e3833'); c.fillStyle = '#9da395'; c.fillRect(x, y - h, width, depth); c.strokeStyle = '#c4c9b9'; c.lineWidth = 2; c.strokeRect(x + 2, y - h + 2, width - 4, depth - 4); c.fillStyle = '#858d80'; c.fillRect(x + 8, y - h + 8, width - 16, depth - 16); c.fillStyle = map.accent; c.fillRect(x + 8, y + depth - 27, Math.min(width - 16, 60), 5); }
     defense(d) { const c = this.c; c.fillStyle = '#20281e40'; c.beginPath(); c.ellipse(d.x + 5, d.y + 5, d.r + 4, d.r * .5, 0, 0, Math.PI * 2); c.fill(); if (d.kind === 'barrel') {
         cube(c, d.x, d.y, 0, 25, 25, 34, '#a66540');

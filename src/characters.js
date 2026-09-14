@@ -226,10 +226,11 @@ export function paintCharacter(c,model,angle) {
   }
 }
 const sprites=new Map();
-const CAPACITY=256;
-const SIZE=112,BASE=98,DENSITY=2;
+const CAPACITY=768;
+const SIZE=112,BASE=98,DENSITY=1.5;
 function getSprite(kind,weapon,angle,frame,stains) {
   const direction=((Math.round(angle/TAU*32)%32)+32)%32;
+  frame=frame===2?0:frame;
   const key=[kind,weapon,direction,frame,stains?1:0].join(':');
   if(sprites.has(key)){const s=sprites.get(key);sprites.delete(key);sprites.set(key,s);return s;}
   const canvas=document.createElement('canvas');canvas.width=SIZE*DENSITY;canvas.height=SIZE*DENSITY;

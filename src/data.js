@@ -1,5 +1,5 @@
 // Original game data. No assets or source from the Boxhead games are used.
-export const VERSION = '1.2.0';
+export const VERSION = '1.3.0';
 export const WORLD = { w: 2160, h: 1520, cell: 40 };
 export const MAP_SCALE = {x:1.5,y:1.52};
 export const MAPS = [
@@ -111,12 +111,12 @@ export const SUPPLIES = [
   { id:'turret', name:'Sentry turret', price:350, description:'An automatic ally with 450 rounds.' }
 ];
 export const ENEMIES = {
-  walker: { name:'Shambler', hp:50, speed:64, damage:13, radius:14, reward:12, score:100, body:'#c9d7c0', head:'#e3d3ad', eye:'#3f241a' },
-  runner: { name:'Runner', hp:38, speed:124, damage:11, radius:12, reward:16, score:150, body:'#d0bc84', head:'#ead7a9', eye:'#41251d' },
-  brute: { name:'Brute', hp:255, speed:44, damage:26, radius:23, reward:40, score:400, body:'#7c877e', head:'#99a58f', eye:'#291f1f' },
-  cinder: { name:'Cinder', hp:140, speed:58, damage:18, radius:17, reward:35, score:350, body:'#d2473d', head:'#ef5b49', eye:'#fff1ae' },
-  bomber: { name:'Bloater', hp:85, speed:78, damage:45, radius:18, reward:26, score:260, body:'#b9ae7a', head:'#d0c28e', eye:'#533b28' },
-  boss: { name:'The warden', hp:1100, speed:47, damage:34, radius:30, reward:300, score:4000, body:'#a53232', head:'#d84945', eye:'#fff1ae' }
+  walker: { name:'Standard zombie', hp:50, speed:64, damage:13, radius:14, reward:12, score:100, body:'#c9d7c0', head:'#e3d3ad', eye:'#3f241a' },
+  runner: { name:'Fast zombie', hp:38, speed:124, damage:11, radius:12, reward:16, score:150, body:'#d0bc84', head:'#ead7a9', eye:'#41251d' },
+  brute: { name:'Heavy zombie', hp:255, speed:44, damage:26, radius:23, reward:40, score:400, body:'#7c877e', head:'#99a58f', eye:'#291f1f' },
+  cinder: { name:'Demon zombie', hp:140, speed:58, damage:18, radius:17, reward:35, score:350, body:'#d2473d', head:'#ef5b49', eye:'#fff1ae' },
+  bomber: { name:'Suicide bomber zombie', hp:85, speed:78, damage:45, radius:18, reward:26, score:260, body:'#b9ae7a', head:'#d0c28e', eye:'#533b28' },
+  boss: { name:'Heavy demon zombie', hp:1100, speed:47, damage:34, radius:30, reward:300, score:4000, body:'#a53232', head:'#d84945', eye:'#fff1ae' }
 };
 export const BUILD_TYPES = ['barrel','mine','wall','turret'];
 export const PICKUP_LABEL = {

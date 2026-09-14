@@ -155,11 +155,11 @@ try:
     const deadline=Date.now()+45000;
     while(Date.now()<deadline){
      const keys=await caches.keys();
-     if(keys.includes('deadblock-survival-1.2.0')&&!keys.includes('deadblock-survival-1.0.0')&&reg.active?.state==='activated'&&navigator.serviceWorker.controller===reg.active)return true;
+     if(keys.includes('deadblock-survival-1.3.0')&&!keys.includes('deadblock-survival-1.0.0')&&reg.active?.state==='activated'&&navigator.serviceWorker.controller===reg.active)return true;
      await new Promise(resolve=>setTimeout(resolve,150));
     }
     throw Error('Updated cache exists but its worker did not take control');
-   }""");page.goto(BASE+'update.html');page.locator('#install').click();page.wait_for_url('**/?v=1.2.0',timeout=60000)
+   }""");page.goto(BASE+'update.html');page.locator('#install').click();page.wait_for_url('**/?v=1.3.0',timeout=60000)
    page.locator('#continueButton').click();page.locator('#pauseButton').click()
    after=page.evaluate('(k)=>JSON.parse(localStorage.getItem(k)).data',KEY);assert saved['id']==after['id']
    page.locator('[data-action="menu"]').click();network=False;page.reload(wait_until='load')
