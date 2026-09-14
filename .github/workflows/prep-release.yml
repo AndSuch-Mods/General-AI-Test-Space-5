@@ -1,0 +1,19 @@
+name: Prepare landscape release
+on:
+  push:
+    branches: [deadblock-landscape-prep-1-2]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Snapshot current source for release verification
+        run: git archive --format=tar HEAD > source.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: landscape-release-source
+          path: source.tar
+          retention-days: 7
